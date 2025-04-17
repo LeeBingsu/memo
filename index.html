@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="default">
 <head>
     <meta charset="UTF-8">
-    <title>메모장</title>
+    <title>메모파일러</title>
     <link rel="icon" href="notepad.png" type="image/png">
     <!-- MathJax for 수식 미리보기 -->
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
@@ -29,344 +29,7 @@
             --icon-filter: invert(87%) sepia(16%) saturate(523%) hue-rotate(146deg) brightness(94%) contrast(92%);
         }
         [data-theme="forest"] {
-            --bg-color: #1A1A1A;
-            --text-color: #E4E4E4;
-            --accent-color: #3E5641;
-            --border-color: #3E5641;
-            --toolbar-bg: #222222;
-            --icon-filter: invert(93%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(106%) contrast(92%);
-        }
-        [data-theme="twilight"] {
-            --bg-color: #2C2C2C;
-            --text-color: #B39CD0;
-            --accent-color: #FFC1CC;
-            --border-color: #FFC1CC;
-            --toolbar-bg: #333333;
-            --icon-filter: invert(80%) sepia(13%) saturate(709%) hue-rotate(223deg) brightness(91%) contrast(87%);
-        }
-        [data-theme="warm"] {
-            --bg-color: #1C1C1C;
-            --text-color: #F5E8D8;
-            --accent-color: #DAA520;
-            --border-color: #DAA520;
-            --toolbar-bg: #2A2A2A;
-            --icon-filter: invert(97%) sepia(13%) saturate(187%) hue-rotate(315deg) brightness(103%) contrast(94%);
-        }
-        [data-theme="emerald"] {
-            --bg-color: #222222;
-            --text-color: #A9DFBF;
-            --accent-color: #4A5E3D;
-            --border-color: #4A5E3D;
-            --toolbar-bg: #2E2E2E;
-            --icon-filter: invert(87%) sepia(18%) saturate(554%) hue-rotate(84deg) brightness(95%) contrast(88%);
-        }
-        body {
-            font-family: var(--font-family);
-            margin: 40px;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            transition: all 0.3s ease;
-        }
-        h2 {
-            color: #FFFFFF; /* 메모장 제목 하얀색으로 변경 */
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
-        }
-        .title-icon {
-            height: 1.2em;
-            vertical-align: middle;
-            margin-right: 8px;
-            filter: var(--icon-filter); /* 테마에 따라 아이콘 색상 변경 */
-        }
-        textarea {
-            width: 100%;
-            height: 400px;
-            font-size: 16px;
-            padding: 15px;
-            box-sizing: border-box;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            line-height: 1.5;
-            font-family: inherit;
-            resize: vertical;
-        }
-        textarea:focus {
-            outline: none;
-            box-shadow: 0 0 5px var(--accent-color);
-        }
-        button { 
-            margin: 5px;
-            padding: 8px 15px;
-            font-size: 14px;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        button:hover {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-        }
-        .button-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 15px;
-        }
-        .toolbar {
-            background-color: var(--toolbar-bg);
-            padding: 10px;
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            margin-bottom: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        .toolbar button {
-            margin: 2px;
-            padding: 5px 10px;
-        }
-        .color-picker {
-            height: 30px;
-            width: 30px;
-            padding: 0;
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            background-color: transparent;
-            cursor: pointer;
-        }
-        .font-size, .font-family {
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            padding: 5px;
-        }
-        .separator {
-            width: 1px;
-            height: 30px;
-            background-color: var(--border-color);
-            margin: 0 5px;
-        }
-        .active {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-        }
-        .theme-selector {
-            margin-bottom: 15px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .theme-btn {
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-            font-size: 12px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
-        .search-container {
-            display: flex;
-            margin-top: 10px;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-        .search-container input {
-            flex-grow: 1;
-            padding: 8px;
-            border-radius: 5px;
-            border: 2px solid var(--border-color);
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-        }
-        .note-list {
-            display: none;
-            margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: var(--toolbar-bg);
-            border: 2px solid var(--border-color);
-        }
-        .note-item {
-            padding: 8px;
-            margin-bottom: 5px;
-            border-radius: 3px;
-            cursor: pointer;
-            background-color: rgba(255,255,255,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .note-item:hover {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-        }
-        .note-item .delete-btn {
-            background-color: rgba(255, 0, 0, 0.3);
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 2px 5px;
-            margin: 0;
-            font-size: 12px;
-        }
-        .note-item .delete-btn:hover {
-            background-color: rgba(255, 0, 0, 0.7);
-        }
-        /* 미리보기 관련 스타일 */
-        .preview-container { display: none; }
-        .split-view { display: flex; gap: 15px; }
-        .split-view textarea { width: 50%; height: 400px; }
-        .split-view .preview-pane {
-            width: 50%; height: 400px; overflow: auto;
-            padding: 15px; border-radius: 5px;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-        }
-        /* PDF 내보내기 관련 스타일 */
-        #pdf-preview-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            z-index: 10001;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        #pdf-preview {
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            max-width: 800px;
-            width: 100%;
-            max-height: 80vh;
-            overflow: auto;
-            color: black;
-        }
-        .pdf-controls {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 10px;
-        }
-        .pdf-controls button {
-            margin-left: 10px;
-        }
-        /* 로딩 표시기 */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10002;
-        }
-        .loading-message {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            padding: 15px 30px;
-            border-radius: 5px;
-            border: 2px solid var(--border-color);
-            font-size: 16px;
-        }
-        /* 수식 입력 관련 스타일 */
-        .math-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10001;
-        }
-        .math-content {
-            background-color: var(--bg-color);
-            padding: 20px;
-            border-radius: 5px;
-            border: 2px solid var(--border-color);
-            max-width: 600px;
-            width: 100%;
-        }
-        .math-input-area {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .math-input-area textarea {
-            height: 100px;
-            margin-bottom: 10px;
-        }
-        .math-preview-area {
-            background-color: var(--toolbar-bg);
-            padding: 15px;
-            border-radius: 5px;
-            min-height: 50px;
-            margin-bottom: 10px;
-        }
-        .math-templates {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .math-symbols {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-            gap: 5px;
-            margin-bottom: 15px;
-        }
-        /* 파일 업로드 버튼 스타일 */
-        .file-upload {
-            position: relative;
-            overflow: hidden;
-            margin: 5px;
-        }
-        .file-upload input[type=file] {
-            position: absolute;
-            top: 0;
-            right: 0;
-            min-width: 100%;
-            min-height: 100%;
-            font-size: 100px;
-            text-align: right;
-            filter: alpha(opacity=0);
-            opacity: 0;
-            outline: none;
-            cursor: pointer;
-            display: block;
-        }
-    </style>
-</head>
-<body>
-    <div id="main-container">
-        <h2><img src="notepad.png" alt="아이콘" class="title-icon">메모장</h2>
+   러</h2>
         <div class="theme-selector">
             <button class="theme-btn" onclick="changeTheme('default')">기본 테마</button>
             <button class="theme-btn" onclick="changeTheme('midnight')">미드나이트 블루</button>
@@ -1435,91 +1098,33 @@
             });
         };
     </script>
-
-<!-- 기존 코드에 추가할 내용 -->
-
-<!-- 코딩 모드 스타일 -->
-<style>
-    .coding-mode { display: none; }
-    .code-container {
-        display: flex;
-        gap: 15px;
-        height: 500px;
-    }
-    #pythonEditor {
-        width: 60%;
-        height: 100%;
-        border: 2px solid var(--border-color);
-        border-radius: 5px;
-    }
-    #codeOutput {
-        width: 40%;
-        height: 100%;
-        background-color: #1e1e1e;
-        color: #d4d4d4;
-        padding: 15px;
-        overflow: auto;
-        border: 2px solid var(--border-color);
-        border-radius: 5px;
-        font-family: 'Courier New', monospace;
-    }
-    .cm-editor { height: 100%; }
-    .output-line { margin: 5px 0; }
-    .output-success { color: #6a9955; }
-    .output-error { color: #f44747; }
-</style>
-
-<!-- CSS 추가 -->
-<style>
-    .coding-mode { display: none; }
-    .code-container {
-        display: flex;
-        gap: 15px;
-        height: 500px;
-    }
-    #pythonEditor {
-        width: 50%;
-        height: 100%;
-        border: 2px solid var(--border-color);
-        border-radius: 5px;
-    }
-    #codeOutput {
-        width: 50%;
-        height: 100%;
-        background-color: #1e1e1e;
-        color: #d4d4d4;
-        padding: 15px;
-        overflow: auto;
-        border: 2px solid var(--border-color);
-        border-radius: 5px;
-        font-family: 'Courier New', monospace;
-    }
-    .cm-editor { height: 100%; }
-    .input-line { color: #569cd6; }
-    .output-line { margin: 5px 0; }
-    .output-success { color: #6a9955; }
-    .output-error { color: #f44747; }
-</style>
-
-<!-- 코딩모드 토글 버튼(툴바 등 원하는 위치에 추가) -->
-<button onclick="toggleCodingModeSection()">코딩 모드</button>
+<!-- 코딩모드/메모모드 토글 버튼 (툴바 등 원하는 위치에 추가) -->
+<button id="codingModeToggleBtn" onclick="toggleCodingModeSection()">코딩 모드</button>
 
 <!-- OnlineGDB 스타일 코딩모드 섹션 -->
-<div id="coding-mode-section" style="display:none;">
+<div id="coding-mode-section" style="display:none; margin-top:20px;">
   <div class="toolbar" style="background:#23241f;">
     <button id="runBtn">Run (F9)</button>
     <button id="saveBtn">Save .py (Ctrl+S)</button>
-    <label for="loadFile" style="margin-bottom:0; color:#fff; cursor:pointer;">Load .py</label>
+    <label for="loadFile" id="loadLabel" style="margin-bottom:0; color:#fff; cursor:pointer;">Load .py</label>
     <input type="file" id="loadFile" accept=".py" style="display:none;">
     <span style="margin-left:auto; color:#888;">OnlineGDB Style Python IDE</span>
   </div>
-  <div id="editor"></div>
-  <div style="background:#23241f; padding:8px 12px;">
-    <div style="color:#aaa;font-size:13px;">STDIN (input()):</div>
-    <textarea id="stdin" rows="2" placeholder="여기에 input() 값을 줄 단위로 입력하세요." style="width:100%;background:#333;color:#fff;border:none;padding:6px;border-radius:3px;"></textarea>
-  </div>
-  <div style="background:#1e1e1e; border-top:2px solid #444;">
-    <div id="output" style="height:180px;width:100%;background:#1e1e1e;color:#f8f8f2;font-family:'Courier New',monospace;font-size:15px;padding:10px;overflow-y:auto;white-space:pre-wrap;"></div>
+  <div style="display:flex; gap:10px; background:#23241f; padding:10px 0;">
+    <!-- 코드 에디터 -->
+    <div style="flex:2; min-width:0;">
+      <div id="editor"></div>
+    </div>
+    <!-- 입력창 -->
+    <div style="flex:1; min-width:120px; display:flex; flex-direction:column;">
+      <div style="color:#aaa;font-size:13px;">STDIN (input()):</div>
+      <textarea id="stdin" rows="6" placeholder="여기에 input() 값을 줄 단위로 입력하세요." style="width:100%;background:#333;color:#fff;border:none;padding:6px;border-radius:3px;resize:vertical;min-height:40px;"></textarea>
+    </div>
+    <!-- 출력창 -->
+    <div style="flex:2; min-width:0; display:flex; flex-direction:column;">
+      <div style="color:#aaa;font-size:13px;">OUTPUT</div>
+      <div id="output" style="height:220px;background:#1e1e1e;color:#f8f8f2;font-family:'Courier New',monospace;font-size:15px;padding:10px;overflow-y:auto;white-space:pre-wrap;border-radius:3px; border:1px solid #444;"></div>
+    </div>
   </div>
 </div>
 
@@ -1533,17 +1138,26 @@
 <script>
 let editor, pyodideReady = false, pyodide;
 
-// 코딩모드 토글 (메모장과 전환)
+// 코딩모드/메모모드 토글
 function toggleCodingModeSection() {
   const section = document.getElementById('coding-mode-section');
   const editContainer = document.getElementById('editContainer');
+  const btn = document.getElementById('codingModeToggleBtn');
+  // 메모장 버튼/툴바/테마 등 숨김 처리
+  const hideInCoding = [
+    ...document.querySelectorAll('.toolbar, .theme-selector, .button-container, .search-container, .status-bar, .note-list')
+  ];
   if (section.style.display === 'none') {
     section.style.display = 'block';
     if (editContainer) editContainer.style.display = 'none';
+    btn.textContent = "메모로 돌아가기";
+    hideInCoding.forEach(el => { if(el) el.style.display = 'none'; });
     if (!editor) initializeEditor();
   } else {
     section.style.display = 'none';
     if (editContainer) editContainer.style.display = 'block';
+    btn.textContent = "코딩 모드";
+    hideInCoding.forEach(el => { if(el) el.style.display = ''; });
   }
 }
 
@@ -1558,13 +1172,14 @@ function initializeEditor() {
     autofocus: true,
     autoCloseBrackets: true,
     matchBrackets: true,
+    placeholder: "코드를 입력하세요...",
     extraKeys: {
       "F9": runCode,
       "Ctrl-S": saveCode,
       "Cmd-S": saveCode
     }
   });
-  editor.setValue(`# OnlineGDB 스타일 Python3 예제\nprint("Hello, OnlineGDB!")\nname = input("이름을 입력하세요: ")\nprint("안녕하세요,", name)`);
+  editor.setValue(""); // 기본값 비움(placeholder 사용)
   loadPyodideAndSetup();
 }
 
@@ -1626,6 +1241,9 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   document.getElementById('runBtn').onclick = runCode;
   document.getElementById('saveBtn').onclick = saveCode;
+  document.getElementById('loadLabel').onclick = function() {
+    document.getElementById('loadFile').click();
+  };
 });
 
 // 단축키 연결
@@ -1634,10 +1252,6 @@ window.addEventListener('keydown', function(e) {
   if (e.key === 'F9') { e.preventDefault(); runCode(); }
 });
 </script>
-
-
-
-
 
 </body>
 </html>
