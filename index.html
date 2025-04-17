@@ -1435,6 +1435,152 @@
             });
         };
     </script>
+
+<!-- 코딩 모드 스타일 -->
+<style>
+    .coding-mode { display: none; }
+    .code-container {
+        display: flex;
+        gap: 15px;
+        height: 500px;
+    }
+    #pythonEditor {
+        width: 50%;
+        height: 100%;
+        border: 2px solid var(--border-color);
+        border-radius: 5px;
+    }
+    #codeOutput {
+        width: 50%;
+        height: 100%;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        overflow: auto;
+        border: 2px solid var(--border-color);
+        border-radius: 5px;
+    }
+    .cm-editor { height: 100%; }
+    .output-line { margin: 5px 0; }
+    .output-success { color: #6a9955; }
+    .output-error { color: #f44747; }
+</style>
+
+<!-- 코딩 모드 UI -->
+<div class="coding-mode">
+    <div class="code-container">
+        <div id="pythonEditor"></div>
+        <div id="codeOutput"></div>
+    </div>
+    <div class="button-container" style="margin-top: 10px;">
+        <button onclick="exportPythonFile()">.py로 내보내기</button>
+        <button onclick="clearCodeOutput()">출력 초기화</button>
+    </div>
+</div>
+
+<!-- 툴바에 코딩 모드 버튼 추가 -->
+<button onclick="toggleCodingMode()">코딩 모드</button>
+
+<!-- 필요한 라이브러리 추가 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/dracula.min.css">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+
+<script>
+    // 코딩 모드 관련 변수
+    let codeEditor;
+    let pyodide;
+    
+    // Pyodide 초기화
+    async function initializePyodide() {
+        pyodide = await loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
+        });
+    }
+
+    // 코드 에디터 설정
+    function initializeCodeEditor() {
+        codeEditor = CodeMirror(document.getElementById('pythonEditor'), {
+            mode: 'python',
+            theme: 'dracula',
+            lineNumbers: true,
+            indentUnit: 4,
+            extraKeys: {
+                "Shift-Enter": executePythonCode
+            }
+        });
+    }
+
+    // 코딩 모드 토글
+    function toggleCodingMode() {
+        const codingMode = document.querySelector('.coding-mode');
+        const editContainer = document.getElementById('editContainer');
+        
+        if (codingMode.style.display === 'none') {
+            codingMode.style.display = 'block';
+            editContainer.style.display = 'none';
+            if (!codeEditor) initializeCodeEditor();
+            if (!pyodide) initializePyodide();
+        } else {
+            codingMode.style.display = 'none';
+            editContainer.style.display = 'block';
+        }
+    }
+
+    // 코드 실행 함수
+    async function executePythonCode() {
+        const code = codeEditor.getValue();
+        const outputDiv = document.getElementById('codeOutput');
+        
+        try {
+            pyodide.runPython(`
+                import sys
+                from js import document
+                output = document.getElementById('codeOutput')
+                
+                class OutputCatcher:
+                    def write(self, text):
+                        output.innerHTML += '<div class="output-line output-success">' + text + '</div>'
+                    
+                    def flush(self):
+                        pass
+                
+                sys.stdout = OutputCatcher()
+                sys.stderr = OutputCatcher()
+            `);
+            
+            await pyodide.runPythonAsync(code);
+        } catch (err) {
+            outputDiv.innerHTML += `<div class="output-line output-error">${err}</div>`;
+        }
+    }
+
+    // .py 파일 내보내기
+    function exportPythonFile() {
+        const code = codeEditor.getValue();
+        const blob = new Blob([code], { type: 'text/x-python' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const filename = prompt('파일 이름을 입력하세요:', 'code.py');
+        if (!filename) return;
+        a.href = url;
+        a.download = filename.endsWith('.py') ? filename : filename + '.py';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // 출력 초기화
+    function clearCodeOutput() {
+        document.getElementById('codeOutput').innerHTML = '';
+    }
+
+    // 초기화
+    window.addEventListener('DOMContentLoaded', () => {
+        initializePyodide();
+    });
+</script>
+
 </body>
 </html>
 
