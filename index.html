@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ko" data-theme="default"> <head> <meta charset="UTF-8"> <title>메모장</title> <!-- MathJax 라이브러리 추가 --> <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script> <style> /* 기본 스타일 */ :root { --bg-color: #FFFFFF; --text-color: #333333; --accent-color: #4A90E2; --border-color: #DDDDDD; --toolbar-bg: #F5F5F5; --font-family: 'Arial', sans-serif; }
-        /* 테마 정의 */
+    /* 테마 정의 */
     [data-theme="default"] {
         --bg-color: #222222;
         --text-color: #E0D268;
@@ -332,6 +332,32 @@
     .close:hover {
         color: var(--accent-color);
     }
+    
+    /* 미리보기 관련 스타일 */
+    .preview-container {
+        display: none;
+    }
+    
+    .split-view {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .split-view textarea {
+        width: 50%;
+        height: 400px;
+    }
+    
+    .split-view .preview-pane {
+        width: 50%;
+        height: 400px;
+        overflow: auto;
+        padding: 15px;
+        border-radius: 5px;
+        background-color: var(--toolbar-bg);
+        color: var(--text-color);
+        border: 2px solid var(--border-color);
+    }
 </style>
 </head> <body> <div id="main-container"> <h2>메모장</h2>
     <div class="theme-selector">
@@ -390,6 +416,7 @@
         
         <button onclick="insertDateTime()" title="날짜/시간 삽입">날짜/시간</button>
         <button onclick="toggleFullscreen()" title="전체 화면 모드">전체화면</button>
+        <button onclick="togglePreview()" title="미리보기">미리보기</button>
         
         <div class="separator"></div>
         
@@ -406,7 +433,18 @@
     
     <div id="note-list" class="note-list"></div>
     
-    <textarea id="notepad" placeholder="여기에 메모를 입력하세요..." oninput="autoSave(); updateWordCount();"></textarea>
+    <!-- 기본 편집 화면 -->
+    <div id="editContainer">
+        <textarea id="notepad" placeholder="여기에 메모를 입력하세요..." oninput="autoSave(); updateWordCount();"></textarea>
+    </div>
+    
+    <!-- 미리보기 화면 -->
+    <div id="previewContainer" class="preview-container">
+        <div class="split-view">
+            <textarea id="splitNotepad" placeholder="여기에 메모를 입력하세요..." oninput="updatePreview(); autoSave(); updateWordCount();"></textarea>
+            <div id="previewPane" class="preview-pane"></div>
+        </div>
+    </div>
     
     <!-- 수식 입력 관련 요소 -->
     <div id="math-toolbar" class="math-toolbar">
@@ -506,14 +544,14 @@
     let currentBrushSize = 5;
     let isDrawing = false;
     let mathTemplates = {
-        quadratic: "\$$ x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} \$$",
-        pythagoras: "\$$ a^2 + b^2 = c^2 \$$",
-        derivative: "\$$ \\frac{d}{dx}f(x) = \\lim_{h \\to 0}\\frac{f(x+h) - f(x)}{h} \$$",
-        integral: "\$$ \\int_{a}^{b} f(x) \\, dx = F(b) - F(a) \$$",
-        matrix: "\$$ \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix} \$$",
-        limit: "\$$ \\lim_{x \\to a} f(x) = L \$$",
-        series: "\$$ \\sum_{n=0}^{\\infty} a_n x^n \$$",
-        vector: "\$$ \\vec{v} = \\begin{pmatrix} v_1 \\\\ v_2 \\\\ v_3 \\end{pmatrix} \$$"
+        quadratic: "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
+        pythagoras: "a^2 + b^2 = c^2",
+        derivative: "\\frac{d}{dx}f(x) = \\lim_{h \\to 0}\\frac{f(x+h) - f(x)}{h}",
+        integral: "\\int_{a}^{b} f(x) \\, dx = F(b) - F(a)",
+        matrix: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}",
+        limit: "\\lim_{x \\to a} f(x) = L",
+        series: "\\sum_{n=0}^{\\infty} a_n x^n",
+        vector: "\\vec{v} = \\begin{pmatrix} v_1 \\\\ v_2 \\\\ v_3 \\end{pmatrix}"
     };
     
     // 페이지 로드 전에 테마 적용 (깜빡임 방지)
@@ -541,7 +579,9 @@
     
     // 저장 함수
     function saveNote(isAuto = false) {
-        const content = document.getElementById('notepad').value;
+        const content = isPreviewMode() ? 
+            document.getElementById('splitNotepad').value : 
+            document.getElementById('notepad').value;
         
         // 현재 메모 저장
         notes[currentNoteId] = {
@@ -586,6 +626,11 @@
             if (notes[currentNoteId]) {
                 const content = notes[currentNoteId].content;
                 document.getElementById('notepad').value = content;
+                document.getElementById('splitNotepad').value = content;
+                
+                if (isPreviewMode()) {
+                    updatePreview();
+                }
                 
                 updateWordCount();
                 alert('메모를 불러왔습니다!');
@@ -603,14 +648,21 @@
     // 메모 지우기
     function clearNote() {
         if(confirm('정말로 메모를 지우시겠습니까?')) {
-            document.getElementById('notepad').value = '';
+            if (isPreviewMode()) {
+                document.getElementById('splitNotepad').value = '';
+                updatePreview();
+            } else {
+                document.getElementById('notepad').value = '';
+            }
             updateWordCount();
         }
     }
     
     // 다운로드 함수
     function downloadNote() {
-        const text = document.getElementById('notepad').value;
+        const text = isPreviewMode() ? 
+            document.getElementById('splitNotepad').value : 
+            document.getElementById('notepad').value;
             
         if (!text) {
             alert('다운로드할 내용이 없습니다.');
@@ -632,7 +684,9 @@
     
     // 클립보드에 복사
     function copyToClipboard() {
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
             
         textarea.select();
         document.execCommand('copy');
@@ -641,7 +695,9 @@
     
     // 텍스트 서식 지정
     function formatText(format) {
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
             
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -686,6 +742,11 @@
         // 버튼 활성화 상태 토글
         toggleButtonState(format);
         
+        // 미리보기 모드인 경우 미리보기 업데이트
+        if (isPreviewMode()) {
+            updatePreview();
+        }
+        
         // 자동 저장 및 단어 수 업데이트
         autoSave();
         updateWordCount();
@@ -704,7 +765,9 @@
     
     // 글꼴 크기 변경
     function changeFont(size) {
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
             
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -737,6 +800,11 @@
         textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
         textarea.focus();
         
+        // 미리보기 모드인 경우 미리보기 업데이트
+        if (isPreviewMode()) {
+            updatePreview();
+        }
+        
         // 자동 저장 및 단어 수 업데이트
         autoSave();
         updateWordCount();
@@ -754,7 +822,9 @@
     
     // 색상 변경
     function changeColor(color) {
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
             
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -769,6 +839,11 @@
         textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
         textarea.focus();
         
+        // 미리보기 모드인 경우 미리보기 업데이트
+        if (isPreviewMode()) {
+            updatePreview();
+        }
+        
         // 자동 저장 및 단어 수 업데이트
         autoSave();
         updateWordCount();
@@ -776,7 +851,9 @@
     
     // 색상 초기화
     function resetColor() {
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
             
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -794,6 +871,11 @@
         textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
         textarea.focus();
         
+        // 미리보기 모드인 경우 미리보기 업데이트
+        if (isPreviewMode()) {
+            updatePreview();
+        }
+        
         // 자동 저장 및 단어 수 업데이트
         autoSave();
         updateWordCount();
@@ -801,7 +883,9 @@
     
     // 날짜/시간 삽입
     function insertDateTime() {
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
             
         const cursorPos = textarea.selectionStart;
         const now = new Date().toLocaleString();
@@ -815,6 +899,11 @@
         textarea.focus();
         textarea.selectionStart = cursorPos + dateTimeText.length;
         textarea.selectionEnd = cursorPos + dateTimeText.length;
+        
+        // 미리보기 모드인 경우 미리보기 업데이트
+        if (isPreviewMode()) {
+            updatePreview();
+        }
         
         // 자동 저장 및 단어 수 업데이트
         autoSave();
@@ -835,13 +924,85 @@
             container.classList.add('fullscreen');
             document.body.style.overflow = 'hidden';
             isFullscreen = true;
-            document.getElementById('notepad').focus();
+            
+            const textarea = isPreviewMode() ? 
+                document.getElementById('splitNotepad') : 
+                document.getElementById('notepad');
+            textarea.focus();
+        }
+    }
+    
+    // 미리보기 모드 토글
+    function togglePreview() {
+        const editContainer = document.getElementById('editContainer');
+        const previewContainer = document.getElementById('previewContainer');
+        
+        if (editContainer.style.display === 'none') {
+            // 편집 모드로 전환
+            editContainer.style.display = 'block';
+            previewContainer.style.display = 'none';
+            document.getElementById('notepad').value = document.getElementById('splitNotepad').value;
+        } else {
+            // 미리보기 모드로 전환
+            editContainer.style.display = 'none';
+            previewContainer.style.display = 'block';
+            document.getElementById('splitNotepad').value = document.getElementById('notepad').value;
+            updatePreview();
+        }
+    }
+    
+    // 미리보기 모드인지 확인
+    function isPreviewMode() {
+        return document.getElementById('editContainer').style.display === 'none';
+    }
+    
+    // 미리보기 업데이트
+    function updatePreview() {
+        const markdown = document.getElementById('splitNotepad').value;
+        const previewPane = document.getElementById('previewPane');
+        
+        // 간단한 마크다운 변환 (실제로는 더 복잡한 라이브러리 사용 권장)
+        let html = markdown
+            // 헤딩
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            // 굵게
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // 기울임
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // 밑줄
+            .replace(/_(.*?)_/g, '<u>$1</u>')
+            // 취소선
+            .replace(/~~(.*?)~~/g, '<s>$1</s>')
+            // 목록
+            .replace(/^-  (.*$)/gm, '<li>$1</li>')
+            // 번호 목록 (간단한 구현)
+            .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+            // 색상 태그
+            .replace(/<color=([^>]+)>(.*?)<\/color>/g, '<span style="color:$1">$2</span>')
+            // 이미지 태그 처리
+            .replace(/<img src="(.*?)" alt="(.*?)">/g, '<img src="$1" alt="$2" style="max-width:100%;">')
+            // 수식 처리
+            .replace(/\$\$(.*?)\$\$/g, '<div class="math">$$$$1$$</div>')
+            // 줄바꿈
+            .replace(/\n/g, '<br>');
+            
+        previewPane.innerHTML = html;
+        
+        // MathJax로 수식 렌더링
+        if (typeof MathJax !== 'undefined') {
+            MathJax.typesetPromise([previewPane]).catch(function (err) {
+                console.log('MathJax 오류:', err);
+            });
         }
     }
     
     // 단어 수 및 줄 수 업데이트
     function updateWordCount() {
-        const text = document.getElementById('notepad').value;
+        const text = isPreviewMode() ? 
+            document.getElementById('splitNotepad').value : 
+            document.getElementById('notepad').value;
             
         const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
         const lineCount = text === '' ? 0 : text.split('\n').length;
@@ -866,6 +1027,11 @@
         
         // 메모장 비우기
         document.getElementById('notepad').value = '';
+        document.getElementById('splitNotepad').value = '';
+        
+        if (isPreviewMode()) {
+            updatePreview();
+        }
         
         updateWordCount();
         saveNote();
@@ -913,6 +1079,11 @@
             
             const content = notes[noteId].content;
             document.getElementById('notepad').value = content;
+            document.getElementById('splitNotepad').value = content;
+            
+            if (isPreviewMode()) {
+                updatePreview();
+            }
             
             updateWordCount();
             updateNoteList();
@@ -927,7 +1098,10 @@
             return;
         }
         
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
+            
         const text = textarea.value;
         const index = text.indexOf(searchTerm);
         
@@ -989,7 +1163,7 @@
     
     // 수식 템플릿 삽입
     function insertMathTemplate(template) {
-        document.getElementById('math-input').value = mathTemplates[template].replace(/\$$/g, '').replace(/\$$/g, '');
+        document.getElementById('math-input').value = mathTemplates[template];
         previewMath();
         closeMathModal();
     }
@@ -999,7 +1173,7 @@
         const mathInput = document.getElementById('math-input').value;
         const mathPreview = document.getElementById('math-preview');
         
-        mathPreview.innerHTML = '\$$' + mathInput + '\$$';
+        mathPreview.innerHTML = '$$' + mathInput + '$$';
         
         // MathJax로 수식 렌더링
         MathJax.typesetPromise([mathPreview]).catch(function (err) {
@@ -1015,9 +1189,12 @@
             return;
         }
         
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
+            
         const cursorPos = textarea.selectionStart;
-        const mathText = '\$$' + mathInput + '\$$';
+        const mathText = '$$' + mathInput + '$$';
         
         textarea.value = 
             textarea.value.substring(0, cursorPos) + 
@@ -1035,6 +1212,11 @@
         // 수식 입력 창 닫기
         document.getElementById('math-toolbar').style.display = 'none';
         document.getElementById('math-preview').style.display = 'none';
+        
+        // 미리보기 모드인 경우 미리보기 업데이트
+        if (isPreviewMode()) {
+            updatePreview();
+        }
         
         // 자동 저장 및 단어 수 업데이트
         autoSave();
@@ -1173,7 +1355,10 @@
         const canvas = document.getElementById('drawing-canvas');
         const imageData = canvas.toDataURL('image/png');
         
-        const textarea = document.getElementById('notepad');
+        const textarea = isPreviewMode() ? 
+            document.getElementById('splitNotepad') : 
+            document.getElementById('notepad');
+            
         const cursorPos = textarea.selectionStart;
         const imageTag = `\n<img src="${imageData}" alt="그림">\n`;
         
@@ -1189,6 +1374,11 @@
         // 그림 그리기 창 닫기
         document.getElementById('drawing-canvas').style.display = 'none';
         document.getElementById('drawing-toolbar').style.display = 'none';
+        
+        // 미리보기 모드인 경우 미리보기 업데이트
+        if (isPreviewMode()) {
+            updatePreview();
+        }
         
         // 자동 저장 및 단어 수 업데이트
         autoSave();
@@ -1244,6 +1434,10 @@
                     case 'f': // Ctrl+F: 검색
                         e.preventDefault();
                         document.getElementById('searchInput').focus();
+                        break;
+                    case 'p': // Ctrl+P: 미리보기
+                        e.preventDefault();
+                        togglePreview();
                         break;
                 }
             } else if (e.key === 'F11') { // F11: 전체 화면
