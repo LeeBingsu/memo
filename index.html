@@ -1,664 +1,502 @@
-<!DOCTYPE html>
-<html lang="ko" data-theme="default">
-<head>
-    <meta charset="UTF-8">
-    <title>다크 테마 메모장</title>
-    <link rel="icon" href="notepad.png" type="image/png">
-    <!-- MathJax for 수식 미리보기 -->
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async
-      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <style>
-        :root {
-            --bg-color: #222222;
-            --text-color: #E0D268;
-            --accent-color: #E0D268;
-            --border-color: #E0D268;
-            --toolbar-bg: #333333;
-            --font-family: 'Arial', sans-serif;
-        }
-        [data-theme="midnight"] {
-            --bg-color: #121212;
-            --text-color: #A8DADC;
-            --accent-color: #004D61;
-            --border-color: #004D61;
-            --toolbar-bg: #1A1A1A;
-        }
-        [data-theme="forest"] {
-            --bg-color: #1A1A1A;
-            --text-color: #E4E4E4;
-            --accent-color: #3E5641;
-            --border-color: #3E5641;
-            --toolbar-bg: #222222;
-        }
-        [data-theme="twilight"] {
-            --bg-color: #2C2C2C;
-            --text-color: #B39CD0;
-            --accent-color: #FFC1CC;
-            --border-color: #FFC1CC;
-            --toolbar-bg: #333333;
-        }
-        [data-theme="warm"] {
-            --bg-color: #1C1C1C;
-            --text-color: #F5E8D8;
-            --accent-color: #DAA520;
-            --border-color: #DAA520;
-            --toolbar-bg: #2A2A2A;
-        }
-        [data-theme="emerald"] {
-            --bg-color: #222222;
-            --text-color: #A9DFBF;
-            --accent-color: #4A5E3D;
-            --border-color: #4A5E3D;
-            --toolbar-bg: #2E2E2E;
-        }
-        body {
-            font-family: var(--font-family);
-            margin: 40px;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            transition: all 0.3s ease;
-        }
-        h2 {
-            color: var(--text-color);
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
-        }
-        textarea {
-            width: 100%;
-            height: 400px;
-            font-size: 16px;
-            padding: 15px;
-            box-sizing: border-box;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            line-height: 1.5;
-            font-family: inherit;
-            resize: vertical;
-        }
-        textarea:focus {
-            outline: none;
-            box-shadow: 0 0 5px var(--accent-color);
-        }
-        button {
-            margin: 5px;
-            padding: 8px 15px;
-            font-size: 14px;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        button:hover {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-        }
-        .button-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 15px;
-        }
-        .toolbar {
-            background-color: var(--toolbar-bg);
-            padding: 10px;
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            margin-bottom: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        .toolbar button {
-            margin: 2px;
-            padding: 5px 10px;
-        }
-        .color-picker {
-            height: 30px;
-            width: 30px;
-            padding: 0;
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            background-color: transparent;
-            cursor: pointer;
-        }
-        .font-size, .font-family {
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-            border-radius: 5px;
-            padding: 5px;
-        }
-        .separator {
-            width: 1px;
-            height: 30px;
-            background-color: var(--border-color);
-            margin: 0 5px;
-        }
-        .active {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-        }
-        .theme-selector {
-            margin-bottom: 15px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .theme-btn {
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-            font-size: 12px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
-        .fullscreen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 9999;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            background-color: var(--bg-color);
-        }
-        .fullscreen textarea {
-            height: calc(100vh - 150px);
-        }
-        .fullscreen-controls {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 10000;
-            display: none;
-        }
-        .fullscreen .fullscreen-controls {
-            display: block;
-        }
-        .search-container {
-            display: flex;
-            margin-top: 10px;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-        .search-container input {
-            flex-grow: 1;
-            padding: 8px;
-            border-radius: 5px;
-            border: 2px solid var(--border-color);
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-        }
-        .note-list {
-            display: none;
-            margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: var(--toolbar-bg);
-            border: 2px solid var(--border-color);
-        }
-        .note-item {
-            padding: 8px;
-            margin-bottom: 5px;
-            border-radius: 3px;
-            cursor: pointer;
-            background-color: rgba(255,255,255,0.1);
-        }
-        .note-item:hover {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-        }
-        /* 미리보기 관련 스타일 */
-        .preview-container { display: none; }
-        .split-view { display: flex; gap: 15px; }
-        .split-view textarea { width: 50%; height: 400px; }
-        .split-view .preview-pane {
-            width: 50%; height: 400px; overflow: auto;
-            padding: 15px; border-radius: 5px;
-            background-color: var(--toolbar-bg);
-            color: var(--text-color);
-            border: 2px solid var(--border-color);
-        }
-        .img-toggle-btn {
-            display: inline-block;
-            background: #444;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 2px 8px;
-            cursor: pointer;
-            margin: 2px 0;
-            font-size: 0.95em;
-        }
-        .img-preview { display: none; margin: 5px 0; }
-    </style>
-</head>
-<body>
-    <div id="main-container">
-        <h2><img src="notepad.png" alt="아이콘" style="height:1.2em;vertical-align:middle;margin-right:8px;">다크 테마 메모장</h2>
-        <div class="theme-selector">
-            <button class="theme-btn" onclick="changeTheme('default')">기본 테마</button>
-            <button class="theme-btn" onclick="changeTheme('midnight')">미드나이트 블루</button>
-            <button class="theme-btn" onclick="changeTheme('forest')">딥 포레스트</button>
-            <button class="theme-btn" onclick="changeTheme('twilight')">트와일라잇</button>
-            <button class="theme-btn" onclick="changeTheme('warm')">웜 톤</button>
-            <button class="theme-btn" onclick="changeTheme('emerald')">에메랄드</button>
-        </div>
-        <div class="toolbar">
-            <button id="bold" onclick="formatText('bold')" title="굵게"><b>B</b></button>
-            <button id="italic" onclick="formatText('italic')" title="기울임"><i>I</i></button>
-            <button id="underline" onclick="formatText('underline')" title="밑줄"><u>U</u></button>
-            <button id="strikethrough" onclick="formatText('strikethrough')" title="취소선"><s>S</s></button>
-            <div class="separator"></div>
-            <button onclick="formatText('heading1')" title="제목 1">H1</button>
-            <button onclick="formatText('heading2')" title="제목 2">H2</button>
-            <button onclick="formatText('heading3')" title="제목 3">H3</button>
-            <div class="separator"></div>
-            <button onclick="formatText('list')" title="목록">-  목록</button>
-            <button onclick="formatText('numberedList')" title="번호 목록">1. 번호</button>
-            <div class="separator"></div>
-            <select class="font-size" onchange="changeFont(this.value)" title="글꼴 크기">
-                <option value="">글꼴 크기</option>
-                <option value="small">작게</option>
-                <option value="medium">보통</option>
-                <option value="large">크게</option>
-                <option value="x-large">매우 크게</option>
-            </select>
-            <select class="font-family" onchange="changeFontFamily(this.value)" title="글꼴">
-                <option value="">글꼴</option>
-                <option value="Arial, sans-serif">Arial</option>
-                <option value="'Times New Roman', serif">Times New Roman</option>
-                <option value="'Courier New', monospace">Courier New</option>
-                <option value="Georgia, serif">Georgia</option>
-                <option value="Verdana, sans-serif">Verdana</option>
-                <option value="'Nanum Gothic', sans-serif">나눔 고딕</option>
-                <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
-            </select>
-            <div class="separator"></div>
-            <input type="color" value="#E0D268" class="color-picker" onchange="changeColor(this.value)" title="글자 색상">
-            <button onclick="resetColor()" title="기본 색상으로 복원">기본색</button>
-            <div class="separator"></div>
-            <button onclick="insertDateTime()" title="날짜/시간 삽입">날짜/시간</button>
-            <button onclick="toggleFullscreen()" title="전체 화면 모드">전체화면</button>
-            <button onclick="togglePreview()" title="미리보기">미리보기</button>
-        </div>
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="메모 내용 검색...">
-            <button onclick="searchText()">검색</button>
-            <button onclick="clearSearch()">지우기</button>
-        </div>
-        <div id="note-list" class="note-list"></div>
-        <!-- 기본 편집 화면 -->
-        <div id="editContainer">
-            <textarea id="notepad" placeholder="여기에 메모를 입력하세요..." oninput="autoSave(); updateWordCount();"></textarea>
-        </div>
-        <!-- 미리보기 화면 -->
-        <div id="previewContainer" class="preview-container">
-            <div class="split-view">
-                <textarea id="splitNotepad" placeholder="여기에 메모를 입력하세요..." oninput="updatePreview(); autoSave(); updateWordCount();"></textarea>
-                <div id="previewPane" class="preview-pane"></div>
-            </div>
-        </div>
-        <div class="fullscreen-controls">
-            <button onclick="toggleFullscreen()">전체화면 종료</button>
-        </div>
-        <div class="status-bar">
-            <span id="wordCount">글자 수: 0 | 단어 수: 0 | 줄 수: 0</span>
-            <span id="lastSaved">마지막 저장: -</span>
-        </div>
-        <div class="button-container">
-            <button onclick="saveNote()">저장</button>
-            <button onclick="loadNote()">불러오기</button>
-            <button onclick="clearNote()">지우기</button>
-            <button onclick="downloadNote()">다운로드</button>
-            <button onclick="copyToClipboard()">클립보드에 복사</button>
-            <button onclick="createNewNote()">새 메모</button>
-            <button onclick="toggleNoteList()">메모 목록</button>
-        </div>
-    </div>
-    <script>
-        // ... 기존 변수 및 함수 생략 ...
-        let currentNoteId = 'default';
-        let autoSaveTimer;
-        let notes = {};
-        let isFullscreen = false;
-
-        (function() {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
-        })();
-
-        function changeTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-        }
-        function autoSave() {
-            clearTimeout(autoSaveTimer);
-            autoSaveTimer = setTimeout(function() { saveNote(true); }, 3000);
-        }
-        function saveNote(isAuto = false) {
-            const content = isPreviewMode() ? document.getElementById('splitNotepad').value : document.getElementById('notepad').value;
-            notes[currentNoteId] = { content: content, lastModified: new Date().toLocaleString() };
-            localStorage.setItem('notes', JSON.stringify(notes));
-            localStorage.setItem('noteIds', JSON.stringify(Object.keys(notes)));
-            localStorage.setItem('currentNoteId', currentNoteId);
-            updateLastSaved(isAuto);
-        }
-        function updateLastSaved(isAuto) {
-            const now = new Date().toLocaleString();
-            document.getElementById('lastSaved').textContent = '마지막 저장: ' + now + (isAuto ? ' (자동)' : '');
-        }
-        function loadNote() {
-            const savedNotes = localStorage.getItem('notes');
-            if (savedNotes) {
-                notes = JSON.parse(savedNotes);
-                const savedCurrentNoteId = localStorage.getItem('currentNoteId');
-                if (savedCurrentNoteId) currentNoteId = savedCurrentNoteId;
-                if (notes[currentNoteId]) {
-                    const content = notes[currentNoteId].content;
-                    document.getElementById('notepad').value = content;
-                    document.getElementById('splitNotepad').value = content;
-                    if (isPreviewMode()) updatePreview();
-                    updateWordCount();
-                    alert('메모를 불러왔습니다!');
-                } else alert('저장된 메모가 없습니다.');
-            } else alert('저장된 메모가 없습니다.');
-            updateNoteList();
-        }
-        function clearNote() {
-            if(confirm('정말로 메모를 지우시겠습니까?')) {
-                if (isPreviewMode()) {
-                    document.getElementById('splitNotepad').value = '';
-                    updatePreview();
-                } else document.getElementById('notepad').value = '';
-                updateWordCount();
-            }
-        }
-        function downloadNote() {
-            const text = isPreviewMode() ? document.getElementById('splitNotepad').value : document.getElementById('notepad').value;
-            if (!text) return alert('다운로드할 내용이 없습니다.');
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const filename = prompt('파일 이름을 입력하세요:', 'memo.txt');
-            if (!filename) return;
-            a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
-        }
-        function copyToClipboard() {
-            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-            textarea.select();
-            document.execCommand('copy');
-            alert('클립보드에 복사되었습니다!');
-        }
-        function formatText(format) {
-            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-            const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
-            let formattedText = '';
-            switch(format) {
-                case 'bold': formattedText = `**${selectedText}**`; break;
-                case 'italic': formattedText = `*${selectedText}*`; break;
-                case 'underline': formattedText = `_${selectedText}_`; break;
-                case 'strikethrough': formattedText = `~~${selectedText}~~`; break;
-                case 'heading1': formattedText = `\n# ${selectedText}\n`; break;
-                case 'heading2': formattedText = `\n## ${selectedText}\n`; break;
-                case 'heading3': formattedText = `\n### ${selectedText}\n`; break;
-                case 'list': formattedText = selectedText.split('\n').map(line => `-  ${line}`).join('\n'); break;
-                case 'numberedList': formattedText = selectedText.split('\n').map((line, i) => `${i+1}. ${line}`).join('\n'); break;
-            }
-            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-            textarea.focus();
-            textarea.selectionStart = start;
-            textarea.selectionEnd = start + formattedText.length;
-            toggleButtonState(format);
-            if (isPreviewMode()) updatePreview();
-            autoSave();
-            updateWordCount();
-        }
-        function toggleButtonState(format) {
-            const button = document.getElementById(format);
-            if (button) {
-                button.classList.toggle('active');
-                setTimeout(() => { button.classList.remove('active'); }, 300);
-            }
-        }
-        function changeFont(size) {
-            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-            const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
-            if (!selectedText) return alert('글꼴 크기를 변경할 텍스트를 먼저 선택하세요.');
-            let sizeTag = '';
-            switch(size) {
-                case 'small': sizeTag = '<small>'; break;
-                case 'medium': sizeTag = '<medium>'; break;
-                case 'large': sizeTag = '<large>'; break;
-                case 'x-large': sizeTag = '<x-large>'; break;
-                default: return;
-            }
-            const formattedText = `${sizeTag}${selectedText}</${size}>`;
-            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-            textarea.focus();
-            if (isPreviewMode()) updatePreview();
-            autoSave();
-            updateWordCount();
-        }
-        function changeFontFamily(fontFamily) {
-            if (fontFamily) {
-                document.documentElement.style.setProperty('--font-family', fontFamily);
-                localStorage.setItem('fontFamily', fontFamily);
-            }
-        }
-        function changeColor(color) {
-            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-            const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
-            if (!selectedText) return alert('색상을 변경할 텍스트를 먼저 선택하세요.');
-            const formattedText = `<color=${color}>${selectedText}</color>`;
-            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-            textarea.focus();
-            if (isPreviewMode()) updatePreview();
-            autoSave();
-            updateWordCount();
-        }
-        function resetColor() {
-            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-            const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
-            if (!selectedText) return alert('색상을 초기화할 텍스트를 먼저 선택하세요.');
-            const regex = /<color=[^>]+>(.+?)<\/color>/g;
-            const formattedText = selectedText.replace(regex, '$1');
-            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-            textarea.focus();
-            if (isPreviewMode()) updatePreview();
-            autoSave();
-            updateWordCount();
-        }
-        function insertDateTime() {
-            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-            const cursorPos = textarea.selectionStart;
-            const now = new Date().toLocaleString();
-            const dateTimeText = `[${now}] `;
-            textarea.value = textarea.value.substring(0, cursorPos) + dateTimeText + textarea.value.substring(cursorPos);
-            textarea.focus();
-            textarea.selectionStart = cursorPos + dateTimeText.length;
-            textarea.selectionEnd = cursorPos + dateTimeText.length;
-            if (isPreviewMode()) updatePreview();
-            autoSave();
-            updateWordCount();
-        }
-        function toggleFullscreen() {
-            const container = document.getElementById('main-container');
-            if (isFullscreen) {
-                container.classList.remove('fullscreen');
-                document.body.style.overflow = 'auto';
-                isFullscreen = false;
-            } else {
-                container.classList.add('fullscreen');
-                document.body.style.overflow = 'hidden';
-                isFullscreen = true;
-                const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-                textarea.focus();
-            }
-        }
-        function togglePreview() {
-            const editContainer = document.getElementById('editContainer');
-            const previewContainer = document.getElementById('previewContainer');
-            if (editContainer.style.display === 'none') {
-                editContainer.style.display = 'block';
-                previewContainer.style.display = 'none';
-                document.getElementById('notepad').value = document.getElementById('splitNotepad').value;
-            } else {
-                editContainer.style.display = 'none';
-                previewContainer.style.display = 'block';
-                document.getElementById('splitNotepad').value = document.getElementById('notepad').value;
-                updatePreview();
-            }
-        }
-        function isPreviewMode() {
-            return document.getElementById('editContainer').style.display === 'none';
-        }
-        // --- 미리보기 업데이트 (수식/그림 접기 반영) ---
-        function updatePreview() {
-            const markdown = document.getElementById('splitNotepad').value;
-            const previewPane = document.getElementById('previewPane');
-            // 1. 이미지 태그를 접기 버튼으로 변환
-            let html = markdown.replace(/<img\s+src="([^"]+)"\s+alt="([^"]*)"\s*>/g, function(match, src, alt) {
-                const imgId = 'img_' + Math.random().toString(36).substr(2, 9);
-                return `
-                    <button class="img-toggle-btn" onclick="toggleImgPreview('${imgId}')">🖼️ 그림(클릭)</button>
-                    <div id="${imgId}" class="img-preview">
-                        <img src="${src}" alt="${alt}" style="max-width:100%;"><br>
-                        <button class="img-toggle-btn" onclick="toggleImgPreview('${imgId}')">접기</button>
-                    </div>
-                `;
-            });
-            // 2. 수식은 div.math로 감싸고, MathJax가 렌더링하도록
-            html = html.replace(/\$\$(.*?)\$\$/gs, function(match, math) {
-                return `<div class="math">$$${math}$$</div>`;
-            });
-            // 3. 마크다운 등 기타 변환 (간단 버전)
-            html = html
-                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/_(.*?)_/g, '<u>$1</u>')
-                .replace(/~~(.*?)~~/g, '<s>$1</s>')
-                .replace(/^-  (.*$)/gm, '<li>$1</li>')
-                .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
-                .replace(/<color=([^>]+)>(.*?)<\/color>/g, '<span style="color:$1">$2</span>')
-                .replace(/\n/g, '<br>');
-            previewPane.innerHTML = html;
-            if (typeof MathJax !== 'undefined') {
-                MathJax.typesetPromise([previewPane]).catch(function (err) {
-                    console.log('MathJax 오류:', err);
-                });
-            }
-        }
-        // 그림 접기/펼치기 토글 함수 (전역)
-        window.toggleImgPreview = function(id) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
-        };
-        function updateWordCount() {
-            const text = isPreviewMode() ? document.getElementById('splitNotepad').value : document.getElementById('notepad').value;
-            const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-            const lineCount = text === '' ? 0 : text.split('\n').length;
-            document.getElementById('wordCount').textContent =
-                `글자 수: ${text.length} | 단어 수: ${wordCount} | 줄 수: ${lineCount}`;
-        }
-        function createNewNote() {
-            const noteTitle = prompt('새 메모의 제목을 입력하세요:');
-            if (!noteTitle) return;
-            const noteId = 'note_' + Date.now();
-            notes[noteId] = { title: noteTitle, content: '', lastModified: new Date().toLocaleString() };
-            currentNoteId = noteId;
-            document.getElementById('notepad').value = '';
-            document.getElementById('splitNotepad').value = '';
-            if (isPreviewMode()) updatePreview();
-            updateWordCount();
-            saveNote();
-            updateNoteList();
-        }
-        function toggleNoteList() {
-            const noteList = document.getElementById('note-list');
-            if (noteList.style.display === 'block') noteList.style.display = 'none';
-            else { noteList.style.display = 'block'; updateNoteList(); }
-        }
-        function updateNoteList() {
-            const noteList = document.getElementById('note-list');
-            noteList.innerHTML = '';
-            for (const noteId in notes) {
-                const note = notes[noteId];
-                const noteItem = document.createElement('div');
-                noteItem.className = 'note-item';
-                noteItem.textContent = note.title || `메모 ${noteId.substring(5)}`;
-                noteItem.onclick = function() { loadSpecificNote(noteId); };
-                if (noteId === currentNoteId) noteItem.style.fontWeight = 'bold';
-                noteList.appendChild(noteItem);
-            }
-        }
-        function loadSpecificNote(noteId) {
-            if (notes[noteId]) {
-                currentNoteId = noteId;
-                const content = notes[noteId].content;
+<!DOCTYPE html><html lang="ko" data-theme="default"> <head> <meta charset="UTF-8"> <title>메모장</title> <link rel="icon" href="notepad.png" type="image/png"> <!-- MathJax for 수식 미리보기 --> <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script> <!-- jsPDF for PDF 내보내기 --> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> <style> :root { --bg-color: #222222; --text-color: #E0D268; --accent-color: #E0D268; --border-color: #E0D268; --toolbar-bg: #333333; --font-family: 'Arial', sans-serif; } [data-theme="midnight"] { --bg-color: #121212; --text-color: #A8DADC; --accent-color: #004D61; --border-color: #004D61; --toolbar-bg: #1A1A1A; } [data-theme="forest"] { --bg-color: #1A1A1A; --text-color: #E4E4E4; --accent-color: #3E5641; --border-color: #3E5641; --toolbar-bg: #222222; } [data-theme="twilight"] { --bg-color: #2C2C2C; --text-color: #B39CD0; --accent-color: #FFC1CC; --border-color: #FFC1CC; --toolbar-bg: #333333; } [data-theme="warm"] { --bg-color: #1C1C1C; --text-color: #F5E8D8; --accent-color: #DAA520; --border-color: #DAA520; --toolbar-bg: #2A2A2A; } [data-theme="emerald"] { --bg-color: #222222; --text-color: #A9DFBF; --accent-color: #4A5E3D; --border-color: #4A5E3D; --toolbar-bg: #2E2E2E; } body { font-family: var(--font-family); margin: 40px; background-color: var(--bg-color); color: var(--text-color); transition: all 0.3s ease; } h2 { color: var(--text-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 10px; } textarea { width: 100%; height: 400px; font-size: 16px; padding: 15px; box-sizing: border-box; background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 5px; line-height: 1.5; font-family: inherit; resize: vertical; } textarea:focus { outline: none; box-shadow: 0 0 5px var(--accent-color); } button { margin: 5px; padding: 8px 15px; font-size: 14px; background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 5px; cursor: pointer; transition: all 0.3s ease; } button:hover { background-color: var(--accent-color); color: var(--bg-color); } .button-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; } .toolbar { background-color: var(--toolbar-bg); padding: 10px; border: 2px solid var(--border-color); border-radius: 5px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 5px; } .toolbar button { margin: 2px; padding: 5px 10px; } .color-picker { height: 30px; width: 30px; padding: 0; border: 2px solid var(--border-color); border-radius: 5px; background-color: transparent; cursor: pointer; } .font-size, .font-family { background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 5px; padding: 5px; } .separator { width: 1px; height: 30px; background-color: var(--border-color); margin: 0 5px; } .active { background-color: var(--accent-color); color: var(--bg-color); } .theme-selector { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; } .theme-btn { padding: 8px 15px; border-radius: 5px; cursor: pointer; } .status-bar { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; padding: 5px 10px; border-radius: 5px; background-color: var(--toolbar-bg); color: var(--text-color); border: 1px solid var(--border-color); } .fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; margin: 0; padding: 20px; box-sizing: border-box; background-color: var(--bg-color); } .fullscreen textarea { height: calc(100vh - 150px); } .fullscreen-controls { position: fixed; top: 10px; right: 10px; z-index: 10000; display: none; } .fullscreen .fullscreen-controls { display: block; } .search-container { display: flex; margin-top: 10px; gap: 5px; margin-bottom: 10px; } .search-container input { flex-grow: 1; padding: 8px; border-radius: 5px; border: 2px solid var(--border-color); background-color: var(--toolbar-bg); color: var(--text-color); } .note-list { display: none; margin-top: 15px; max-height: 200px; overflow-y: auto; padding: 10px; border-radius: 5px; background-color: var(--toolbar-bg); border: 2px solid var(--border-color); } .note-item { padding: 8px; margin-bottom: 5px; border-radius: 3px; cursor: pointer; background-color: rgba(255,255,255,0.1); } .note-item:hover { background-color: var(--accent-color); color: var(--bg-color); } /* 미리보기 관련 스타일 */ .preview-container { display: none; } .split-view { display: flex; gap: 15px; } .split-view textarea { width: 50%; height: 400px; } .split-view .preview-pane { width: 50%; height: 400px; overflow: auto; padding: 15px; border-radius: 5px; background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); } .img-toggle-btn { display: inline-block; background: #444; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; margin: 2px 0; font-size: 0.95em; } .img-preview { display: none; margin: 5px 0; } /* 이미지 태그 접기 스타일 */ .folded-image { background-color: rgba(255, 255, 255, 0.1); padding: 2px 6px; border-radius: 4px; color: var(--text-color); font-size: 0.9em; cursor: pointer; display: inline-block; margin: 2px 0; } /* PDF 내보내기 관련 스타일 */ #pdf-preview-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 10001; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; } #pdf-preview { background-color: white; padding: 20px; border-radius: 5px; max-width: 800px; width: 100%; max-height: 80vh; overflow: auto; color: black; } .pdf-controls { display: flex; justify-content: flex-end; margin-bottom: 10px; } .pdf-controls button { margin-left: 10px; } </style> </head> <body> <div id="main-container"> <h2><img src="notepad.png" alt="아이콘" style="height:1.2em;vertical-align:middle;margin-right:8px;">메모장</h2> <div class="theme-selector"> <button class="theme-btn" onclick="changeTheme('default')">기본 테마</button> <button class="theme-btn" onclick="changeTheme('midnight')">미드나이트 블루</button> <button class="theme-btn" onclick="changeTheme('forest')">딥 포레스트</button> <button class="theme-btn" onclick="changeTheme('twilight')">트와일라잇</button> <button class="theme-btn" onclick="changeTheme('warm')">웜 톤</button> <button class="theme-btn" onclick="changeTheme('emerald')">에메랄드</button> </div> <div class="toolbar"> <button id="bold" onclick="formatText('bold')" title="굵게"><b>B</b></button> <button id="italic" onclick="formatText('italic')" title="기울임"><i>I</i></button> <button id="underline" onclick="formatText('underline')" title="밑줄"><u>U</u></button> <button id="strikethrough" onclick="formatText('strikethrough')" title="취소선"><s>S</s></button> <div class="separator"></div> <button onclick="formatText('heading1')" title="제목 1">H1</button> <button onclick="formatText('heading2')" title="제목 2">H2</button> <button onclick="formatText('heading3')" title="제목 3">H3</button> <div class="separator"></div> <button onclick="formatText('list')" title="목록">- 목록</button> <button onclick="formatText('numberedList')" title="번호 목록">1. 번호</button> <div class="separator"></div> <select class="font-size" onchange="changeFont(this.value)" title="글꼴 크기"> <option value="">글꼴 크기</option> <option value="small">작게</option> <option value="medium">보통</option> <option value="large">크게</option> <option value="x-large">매우 크게</option> </select> <select class="font-family" onchange="changeFontFamily(this.value)" title="글꼴"> <option value="">글꼴</option> <option value="Arial, sans-serif">Arial</option> <option value="'Times New Roman', serif">Times New Roman</option> <option value="'Courier New', monospace">Courier New</option> <option value="Georgia, serif">Georgia</option> <option value="Verdana, sans-serif">Verdana</option> <option value="'Nanum Gothic', sans-serif">나눔 고딕</option> <option value="'Malgun Gothic', sans-serif">맑은 고딕</option> </select> <div class="separator"></div> <input type="color" value="#E0D268" class="color-picker" onchange="changeColor(this.value)" title="글자 색상"> <button onclick="resetColor()" title="기본 색상으로 복원">기본색</button> <div class="separator"></div> <button onclick="insertDateTime()" title="날짜/시간 삽입">날짜/시간</button> <button onclick="toggleFullscreen()" title="전체 화면 모드">전체화면</button> <button onclick="togglePreview()" title="미리보기">미리보기</button> </div> <div class="search-container"> <input type="text" id="searchInput" placeholder="메모 내용 검색..."> <button onclick="searchText()">검색</button> <button onclick="clearSearch()">지우기</button> </div> <div id="note-list" class="note-list"></div> <!-- 기본 편집 화면 --> <div id="editContainer"> <textarea id="notepad" placeholder="여기에 메모를 입력하세요..." oninput="autoSave(); updateWordCount();"></textarea> </div> <!-- 미리보기 화면 --> <div id="previewContainer" class="preview-container"> <div class="split-view"> <textarea id="splitNotepad" placeholder="여기에 메모를 입력하세요..." oninput="updatePreview(); autoSave(); updateWordCount();"></textarea> <div id="previewPane" class="preview-pane"></div> </div> </div> <!-- PDF 미리보기 컨테이너 --> <div id="pdf-preview-container"> <div id="pdf-preview"> <div class="pdf-controls"> <button onclick="exportToPDF()">PDF 저장</button> <button onclick="closePDFPreview()">닫기</button> </div> <div id="pdf-content"></div> </div> </div> <div class="fullscreen-controls"> <button onclick="toggleFullscreen()">전체화면 종료</button> </div> <div class="status-bar"> <span id="wordCount">글자 수: 0 | 단어 수: 0 | 줄 수: 0</span> <span id="lastSaved">마지막 저장: -</span> </div> <div class="button-container"> <button onclick="saveNote()">저장</button> <button onclick="loadNote()">불러오기</button> <button onclick="clearNote()">지우기</button> <button onclick="downloadNote()">다운로드</button> <button onclick="copyToClipboard()">클립보드에 복사</button> <button onclick="createNewNote()">새 메모</button> <button onclick="toggleNoteList()">메모 목록</button> <button onclick="showPDFPreview()">PDF로 내보내기</button> </div> </div> <script> // 전역 변수 let currentNoteId = 'default'; let autoSaveTimer; let notes = {}; let isFullscreen = false;
+    // 페이지 로드 전에 테마 적용 (깜빡임 방지)
+    (function() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+    
+    // 테마 변경 함수
+    function changeTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
+    
+    // 자동 저장 기능
+    function autoSave() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(function() { saveNote(true); }, 3000);
+    }
+    
+    // 저장 함수
+    function saveNote(isAuto = false) {
+        const content = isPreviewMode() ? document.getElementById('splitNotepad').value : document.getElementById('notepad').value;
+        notes[currentNoteId] = { content: content, lastModified: new Date().toLocaleString() };
+        localStorage.setItem('notes', JSON.stringify(notes));
+        localStorage.setItem('noteIds', JSON.stringify(Object.keys(notes)));
+        localStorage.setItem('currentNoteId', currentNoteId);
+        updateLastSaved(isAuto);
+    }
+    
+    // 마지막 저장 시간 업데이트
+    function updateLastSaved(isAuto) {
+        const now = new Date().toLocaleString();
+        document.getElementById('lastSaved').textContent = '마지막 저장: ' + now + (isAuto ? ' (자동)' : '');
+    }
+    
+    // 불러오기 함수
+    function loadNote() {
+        const savedNotes = localStorage.getItem('notes');
+        if (savedNotes) {
+            notes = JSON.parse(savedNotes);
+            const savedCurrentNoteId = localStorage.getItem('currentNoteId');
+            if (savedCurrentNoteId) currentNoteId = savedCurrentNoteId;
+            if (notes[currentNoteId]) {
+                const content = notes[currentNoteId].content;
                 document.getElementById('notepad').value = content;
                 document.getElementById('splitNotepad').value = content;
+                
+                // 이미지 태그 접기 적용
+                foldImageTags(document.getElementById('notepad'));
+                foldImageTags(document.getElementById('splitNotepad'));
+                
                 if (isPreviewMode()) updatePreview();
                 updateWordCount();
-                updateNoteList();
-            }
-        }
-        function searchText() {
-            const searchTerm = document.getElementById('searchInput').value.trim();
-            if (!searchTerm) return alert('검색어를 입력하세요.');
-            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-            const text = textarea.value;
-            const index = text.indexOf(searchTerm);
-            if (index !== -1) {
-                textarea.focus();
-                textarea.setSelectionRange(index, index + searchTerm.length);
-            } else alert('검색 결과가 없습니다.');
-        }
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-        }
-        window.onload = function() {
-            var theme = localStorage.getItem('theme');
-            if (theme !== null) changeTheme(theme);
-            var fontFamily = localStorage.getItem('fontFamily');
-            if (fontFamily !== null) document.documentElement.style.setProperty('--font-family', fontFamily);
-            loadNote();
+                alert('메모를 불러왔습니다!');
+            } else alert('저장된 메모가 없습니다.');
+        } else alert('저장된 메모가 없습니다.');
+        updateNoteList();
+    }
+    
+    // 메모 지우기
+    function clearNote() {
+        if(confirm('정말로 메모를 지우시겠습니까?')) {
+            if (isPreviewMode()) {
+                document.getElementById('splitNotepad').value = '';
+                updatePreview();
+            } else document.getElementById('notepad').value = '';
             updateWordCount();
-            document.addEventListener('keydown', function(e) {
-                if (e.ctrlKey) {
-                    switch(e.key) {
-                        case 'b': e.preventDefault(); formatText('bold'); break;
-                        case 'i': e.preventDefault(); formatText('italic'); break;
-                        case 'u': e.preventDefault(); formatText('underline'); break;
-                        case 's': e.preventDefault(); saveNote(); break;
-                        case 'f': e.preventDefault(); document.getElementById('searchInput').focus(); break;
-                        case 'p': e.preventDefault(); togglePreview(); break;
-                    }
-                } else if (e.key === 'F11') {
-                    e.preventDefault(); toggleFullscreen();
-                } else if (e.key === 'Escape' && isFullscreen) {
-                    e.preventDefault(); toggleFullscreen();
-                }
+        }
+    }
+    
+    // 다운로드 함수
+    function downloadNote() {
+        const text = isPreviewMode() ? document.getElementById('splitNotepad').value : document.getElementById('notepad').value;
+        if (!text) return alert('다운로드할 내용이 없습니다.');
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const filename = prompt('파일 이름을 입력하세요:', 'memo.txt');
+        if (!filename) return;
+        a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+    }
+    
+    // 클립보드에 복사
+    function copyToClipboard() {
+        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+        textarea.select();
+        document.execCommand('copy');
+        alert('클립보드에 복사되었습니다!');
+    }
+    
+    // 텍스트 서식 지정
+    function formatText(format) {
+        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+        const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
+        let formattedText = '';
+        switch(format) {
+            case 'bold': formattedText = `**${selectedText}**`; break;
+            case 'italic': formattedText = `*${selectedText}*`; break;
+            case 'underline': formattedText = `_${selectedText}_`; break;
+            case 'strikethrough': formattedText = `~~${selectedText}~~`; break;
+            case 'heading1': formattedText = `\n# ${selectedText}\n`; break;
+            case 'heading2': formattedText = `\n## ${selectedText}\n`; break;
+            case 'heading3': formattedText = `\n### ${selectedText}\n`; break;
+            case 'list': formattedText = selectedText.split('\n').map(line => `-  ${line}`).join('\n'); break;
+            case 'numberedList': formattedText = selectedText.split('\n').map((line, i) => `${i+1}. ${line}`).join('\n'); break;
+        }
+        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+        textarea.focus();
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + formattedText.length;
+        toggleButtonState(format);
+        if (isPreviewMode()) updatePreview();
+        autoSave();
+        updateWordCount();
+    }
+    
+    // 버튼 상태 토글
+    function toggleButtonState(format) {
+        const button = document.getElementById(format);
+        if (button) {
+            button.classList.toggle('active');
+            setTimeout(() => { button.classList.remove('active'); }, 300);
+        }
+    }
+    
+    // 글꼴 크기 변경
+    function changeFont(size) {
+        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+        const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
+        if (!selectedText) return alert('글꼴 크기를 변경할 텍스트를 먼저 선택하세요.');
+        let sizeTag = '';
+        switch(size) {
+            case 'small': sizeTag = '<small>'; break;
+            case 'medium': sizeTag = '<medium>'; break;
+            case 'large': sizeTag = '<large>'; break;
+            case 'x-large': sizeTag = '<x-large>'; break;
+            default: return;
+        }
+        const formattedText = `${sizeTag}${selectedText}</${size}>`;
+        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+        textarea.focus();
+        if (isPreviewMode()) updatePreview();
+        autoSave();
+        updateWordCount();
+    }
+    
+    // 글꼴 변경
+    function changeFontFamily(fontFamily) {
+        if (fontFamily) {
+            document.documentElement.style.setProperty('--font-family', fontFamily);
+            localStorage.setItem('fontFamily', fontFamily);
+        }
+    }
+    
+    // 색상 변경
+    function changeColor(color) {
+        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+        const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
+        if (!selectedText) return alert('색상을 변경할 텍스트를 먼저 선택하세요.');
+        const formattedText = `<color=${color}>${selectedText}</color>`;
+        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+        textarea.focus();
+        if (isPreviewMode()) updatePreview();
+        autoSave();
+        updateWordCount();
+    }
+    
+    // 색상 초기화
+    function resetColor() {
+        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+        const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
+        if (!selectedText) return alert('색상을 초기화할 텍스트를 먼저 선택하세요.');
+        const regex = /<color=[^>]+>(.+?)<\/color>/g;
+        const formattedText = selectedText.replace(regex, '$1');
+        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+        textarea.focus();
+        if (isPreviewMode()) updatePreview();
+        autoSave();
+        updateWordCount();
+    }
+    
+    // 날짜/시간 삽입
+    function insertDateTime() {
+        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+        const cursorPos = textarea.selectionStart;
+        const now = new Date().toLocaleString();
+        const dateTimeText = `[${now}] `;
+        textarea.value = textarea.value.substring(0, cursorPos) + dateTimeText + textarea.value.substring(cursorPos);
+        textarea.focus();
+        textarea.selectionStart = cursorPos + dateTimeText.length;
+        textarea.selectionEnd = cursorPos + dateTimeText.length;
+        if (isPreviewMode()) updatePreview();
+        autoSave();
+        updateWordCount();
+    }
+    
+    // 전체 화면 모드 토글
+    function toggleFullscreen() {
+        const container = document.getElementById('main-container');
+        if (isFullscreen) {
+            container.classList.remove('fullscreen');
+            document.body.style.overflow = 'auto';
+            isFullscreen = false;
+        } else {
+            container.classList.add('fullscreen');
+            document.body.style.overflow = 'hidden';
+            isFullscreen = true;
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            textarea.focus();
+        }
+    }
+    
+    // 미리보기 모드 토글
+    function togglePreview() {
+        const editContainer = document.getElementById('editContainer');
+        const previewContainer = document.getElementById('previewContainer');
+        if (editContainer.style.display === 'none') {
+            editContainer.style.display = 'block';
+            previewContainer.style.display = 'none';
+            document.getElementById('notepad').value = document.getElementById('splitNotepad').value;
+            // 이미지 태그 접기 적용
+            foldImageTags(document.getElementById('notepad'));
+        } else {
+            editContainer.style.display = 'none';
+            previewContainer.style.display = 'block';
+            document.getElementById('splitNotepad').value = document.getElementById('notepad').value;
+            // 이미지 태그 접기 적용
+            foldImageTags(document.getElementById('splitNotepad'));
+            updatePreview();
+        }
+    }
+    
+    // 미리보기 모드인지 확인
+    function isPreviewMode() {
+        return document.getElementById('editContainer').style.display === 'none';
+    }
+    
+    // 미리보기 업데이트 (수식/그림 접기 반영)
+    function updatePreview() {
+        const markdown = document.getElementById('splitNotepad').value;
+        const previewPane = document.getElementById('previewPane');
+        // 1. 이미지 태그를 접기 버튼으로 변환
+        let html = markdown.replace(/<img\s+src="([^"]+)"\s+alt="([^"]*)"\s*>/g, function(match, src, alt) {
+            const imgId = 'img_' + Math.random().toString(36).substr(2, 9);
+            return `
+                <button class="img-toggle-btn" onclick="toggleImgPreview('${imgId}')">🖼️ 그림(클릭)</button>
+                <div id="${imgId}" class="img-preview">
+                    <img src="${src}" alt="${alt}" style="max-width:100%;"><br>
+                    <button class="img-toggle-btn" onclick="toggleImgPreview('${imgId}')">접기</button>
+                </div>
+            `;
+        });
+        // 2. 수식은 div.math로 감싸고, MathJax가 렌더링하도록
+        html = html.replace(/\$\$(.*?)\$\$/gs, function(match, math) {
+            return `<div class="math">$$${math}$$</div>`;
+        });
+        // 3. 마크다운 등 기타 변환 (간단 버전)
+        html = html
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/_(.*?)_/g, '<u>$1</u>')
+            .replace(/~~(.*?)~~/g, '<s>$1</s>')
+            .replace(/^-  (.*$)/gm, '<li>$1</li>')
+            .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+            .replace(/<color=([^>]+)>(.*?)<\/color>/g, '<span style="color:$1">$2</span>')
+            .replace(/\n/g, '<br>');
+        previewPane.innerHTML = html;
+        if (typeof MathJax !== 'undefined') {
+            MathJax.typesetPromise([previewPane]).catch(function (err) {
+                console.log('MathJax 오류:', err);
             });
+        }
+    }
+    
+    // 그림 접기/펼치기 토글 함수 (전역)
+    window.toggleImgPreview = function(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    };
+    
+    // 텍스트 영역에서 이미지 태그 접기 함수
+    function foldImageTags(textarea) {
+        if (!textarea) return;
+        
+        // 원본 텍스트 저장 및 커서 위치 기억
+        const originalText = textarea.value;
+        const selectionStart = textarea.selectionStart;
+        const selectionEnd = textarea.selectionEnd;
+        
+        // 이미지 태그를 찾아 접은 형태로 변환
+        let modifiedText = originalText;
+        let offset = 0; // 커서 위치 조정을 위한 오프셋
+        
+        // 정규식으로 이미지 태그 찾기
+        const regex = /<img\s+src="[^"]+"\s+alt="[^"]*"\s*>/g;
+        let match;
+        
+        // 각 이미지 태그를 접힌 형태로 변환
+        while ((match = regex.exec(originalText)) !== null) {
+            const imgTag = match;
+            const foldedTag = "🖼️ [이미지]";
+            
+            // 텍스트 대체
+            modifiedText = modifiedText.substring(0, match.index + offset) + 
+                           foldedTag + 
+                           modifiedText.substring(match.index + offset + imgTag.length);
+            
+            // 오프셋 조정 (원본 길이와 접힌 형태 길이의 차이)
+            offset += foldedTag.length - imgTag.length;
+        }
+        
+        // 변환된 텍스트 설정 및 커서 위치 복원
+        textarea.value = modifiedText;
+        
+        // 커서 위치 조정
+        if (selectionStart !== undefined) {
+            textarea.selectionStart = Math.max(0, selectionStart + offset);
+            textarea.selectionEnd = Math.max(0, selectionEnd + offset);
+        }
+        
+        // 원본 텍스트 데이터 속성에 저장
+        textarea.dataset.originalText = originalText;
+        
+        // 포커스 이벤트 설정 (포커스 시 원본 텍스트 복원)
+        textarea.onfocus = function() {
+            if (this.dataset.originalText) {
+                this.value = this.dataset.originalText;
+            }
         };
-    </script>
-</body>
-</html>
+        
+        // 블러 이벤트 설정 (포커스 잃을 때 다시 접기)
+        textarea.onblur = function() {
+            this.dataset.originalText = this.value;
+            foldImageTags(this);
+        };
+    }
+    
+    // PDF 미리보기 표시
+    function showPDFPreview() {
+        const content = isPreviewMode() ? document.getElementById('splitNotepad').value : document.getElementById('notepad').value;
+        if (!content) return alert('내보낼 내용이 없습니다.');
+        
+        // PDF 미리보기 컨테이너 표시
+        const pdfPreviewContainer = document.getElementById('pdf-preview-container');
+        pdfPreviewContainer.style.display = 'flex';
+        
+        // PDF 내용 생성
+        const pdfContent = document.getElementById('pdf-content');
+        
+        // 마크다운 변환 (미리보기와 동일한 방식)
+        let html = content
+            .replace(/<img\s+src="([^"]+)"\s+alt="([^"]*)"\s*>/g, '<p>[이미지]</p>')
+            .replace(/\$\$(.*?)\$\$/gs, '<p>[수식: $1]</p>')
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/_(.*?)_/g, '<u>$1</u>')
+            .replace(/~~(.*?)~~/g, '<s>$1</s>')
+            .replace(/^-  (.*$)/gm, '<li>$1</li>')
+            .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+            .replace(/<color=([^>]+)>(.*?)<\/color>/g, '<span style="color:$1">$2</span>')
+            .replace(/\n/g, '<br>');
+        
+        pdfContent.innerHTML = html;
+    }
+    
+    // PDF 내보내기 함수
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const pdfContent = document.getElementById('pdf-content');
+        
+        // PDF 생성
+        html2canvas(pdfContent).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const width = pdf.internal.pageSize.getWidth();
+            const height = pdf.internal.pageSize.getHeight();
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+            
+            // 파일 이름 입력 받기
+            const filename = prompt('PDF 파일 이름을 입력하세요:', 'memo.pdf');
+            if (filename) {
+                pdf.save(filename);
+            }
+        });
+    }
+    
+    // PDF 미리보기 닫기
+    function closePDFPreview() {
+        document.getElementById('pdf-preview-container').style.display = 'none';
+    }
+    
+    function updateWordCount() {
+        const text = isPreviewMode() ? document.getElementById('splitNotepad').value : document.getElementById('notepad').value;
+        const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+        const lineCount = text === '' ? 0 : text.split('\n').length;
+        document.getElementById('wordCount').textContent =
+            `글자 수: ${text.length} | 단어 수: ${wordCount} | 줄 수: ${lineCount}`;
+    }
+    
+    function createNewNote() {
+        const noteTitle = prompt('새 메모의 제목을 입력하세요:');
+        if (!noteTitle) return;
+        const noteId = 'note_' + Date.now();
+        notes[noteId] = { title: noteTitle, content: '', lastModified: new Date().toLocaleString() };
+        currentNoteId = noteId;
+        document.getElementById('notepad').value = '';
+        document.getElementById('splitNotepad').value = '';
+        if (isPreviewMode()) updatePreview();
+        updateWordCount();
+        saveNote();
+        updateNoteList();
+    }
+    
+    function toggleNoteList() {
+        const noteList = document.getElementById('note-list');
+        if (noteList.style.display === 'block') noteList.style.display = 'none';
+        else { noteList.style.display = 'block'; updateNoteList(); }
+    }
+    
+    function updateNoteList() {
+        const noteList = document.getElementById('note-list');
+        noteList.innerHTML = '';
+        for (const noteId in notes) {
+            const note = notes[noteId];
+            const noteItem = document.createElement('div');
+            noteItem.className = 'note-item';
+            noteItem.textContent = note.title || `메모 ${noteId.substring(5)}`;
+            noteItem.onclick = function() { loadSpecificNote(noteId); };
+            if (noteId === currentNoteId) noteItem.style.fontWeight = 'bold';
+            noteList.appendChild(noteItem);
+        }
+    }
+    
+    function loadSpecificNote(noteId) {
+        if (notes[noteId]) {
+            currentNoteId = noteId;
+            const content = notes[noteId].content;
+            document.getElementById('notepad').value = content;
+            document.getElementById('splitNotepad').value = content;
+            
+            // 이미지 태그 접기 적용
+            foldImageTags(document.getElementById('notepad'));
+            foldImageTags(document.getElementById('splitNotepad'));
+            
+            if (isPreviewMode()) updatePreview();
+            updateWordCount();
+            updateNoteList();
+        }
+    }
+    
+    function searchText() {
+        const searchTerm = document.getElementById('searchInput').value.trim();
+        if (!searchTerm) return alert('검색어를 입력하세요.');
+        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+        const text = textarea.value;
+        const index = text.indexOf(searchTerm);
+        if (index !== -1) {
+            textarea.focus();
+            textarea.setSelectionRange(index, index + searchTerm.length);
+        } else alert('검색 결과가 없습니다.');
+    }
+    
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+    }
+    
+    window.onload = function() {
+        var theme = localStorage.getItem('theme');
+        if (theme !== null) changeTheme(theme);
+        var fontFamily = localStorage.getItem('fontFamily');
+        if (fontFamily !== null) document.documentElement.style.setProperty('--font-family', fontFamily);
+        loadNote();
+        updateWordCount();
+        
+        // 단축키 설정
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case 'b': e.preventDefault(); formatText('bold'); break;
+                    case 'i': e.preventDefault(); formatText('italic'); break;
+                    case 'u': e.preventDefault(); formatText('underline'); break;
+                    case 's': e.preventDefault(); saveNote(); break;
+                    case 'f': e.preventDefault(); document.getElementById('searchInput').focus(); break;
+                    case 'p': e.preventDefault(); togglePreview(); break;
+                }
+            } else if (e.key === 'F11') {
+                e.preventDefault(); toggleFullscreen();
+            } else if (e.key === 'Escape' && isFullscreen) {
+                e.preventDefault(); toggleFullscreen();
+            }
+        });
+    };
+</script>
+</body> </html>
