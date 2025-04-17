@@ -1,637 +1,1244 @@
-<!DOCTYPE html> <html lang="ko" data-theme="default"> <head> <meta charset="UTF-8"> <title>메모장</title> <link rel="icon" href="notepad.png" type="image/png"> <!-- MathJax for 수식 미리보기 --> <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script> <!-- PDF 내보내기용 라이브러리 --> <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <style> :root { --bg-color: #222222; --text-color: #E0D268; --accent-color: #E0D268; --border-color: #E0D268; --toolbar-bg: #333333; --font-family: 'Arial', sans-serif; --icon-filter: invert(83%) sepia(32%) saturate(638%) hue-rotate(6deg) brightness(92%) contrast(93%); } [data-theme="midnight"] { --bg-color: #121212; --text-color: #A8DADC; --accent-color: #004D61; --border-color: #004D61; --toolbar-bg: #1A1A1A; --icon-filter: invert(87%) sepia(16%) saturate(523%) hue-rotate(146deg) brightness(94%) contrast(92%); } [data-theme="forest"] { --bg-color: #1A1A1A; --text-color: #E4E4E4; --accent-color: #3E5641; --border-color: #3E5641; --toolbar-bg: #222222; --icon-filter: invert(93%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(106%) contrast(92%); } [data-theme="twilight"] { --bg-color: #2C2C2C; --text-color: #B39CD0; --accent-color: #FFC1CC; --border-color: #FFC1CC; --toolbar-bg: #333333; --icon-filter: invert(80%) sepia(13%) saturate(709%) hue-rotate(223deg) brightness(91%) contrast(87%); } [data-theme="warm"] { --bg-color: #1C1C1C; --text-color: #F5E8D8; --accent-color: #DAA520; --border-color: #DAA520; --toolbar-bg: #2A2A2A; --icon-filter: invert(97%) sepia(13%) saturate(187%) hue-rotate(315deg) brightness(103%) contrast(94%); } [data-theme="emerald"] { --bg-color: #222222; --text-color: #A9DFBF; --accent-color: #4A5E3D; --border-color: #4A5E3D; --toolbar-bg: #2E2E2E; --icon-filter: invert(87%) sepia(18%) saturate(554%) hue-rotate(84deg) brightness(95%) contrast(88%); } body { font-family: var(--font-family); margin: 40px; background-color: var(--bg-color); color: var(--text-color); transition: all 0.3s ease; } h2 { color: #FFFFFF; /* 메모장 제목 하얀색으로 변경 */ border-bottom: 2px solid var(--accent-color); padding-bottom: 10px; } .title-icon { height: 1.2em; vertical-align: middle; margin-right: 8px; filter: var(--icon-filter); /* 테마에 따라 아이콘 색상 변경 */ } textarea { width: 100%; height: 400px; font-size: 16px; padding: 15px; box-sizing: border-box; background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 5px; line-height: 1.5; font-family: inherit; resize: vertical; } textarea:focus { outline: none; box-shadow: 0 0 5px var(--accent-color); } button { margin: 5px; padding: 8px 15px; font-size: 14px; background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 5px; cursor: pointer; transition: all 0.3s ease; } button:hover { background-color: var(--accent-color); color: var(--bg-color); } .button-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; } .toolbar { background-color: var(--toolbar-bg); padding: 10px; border: 2px solid var(--border-color); border-radius: 5px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 5px; } .toolbar button { margin: 2px; padding: 5px 10px; } .color-picker { height: 30px; width: 30px; padding: 0; border: 2px solid var(--border-color); border-radius: 5px; background-color: transparent; cursor: pointer; } .font-size, .font-family { background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 5px; padding: 5px; } .separator { width: 1px; height: 30px; background-color: var(--border-color); margin: 0 5px; } .active { background-color: var(--accent-color); color: var(--bg-color); } .theme-selector { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; } .theme-btn { padding: 8px 15px; border-radius: 5px; cursor: pointer; } .status-bar { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; padding: 5px 10px; border-radius: 5px; background-color: var(--toolbar-bg); color: var(--text-color); border: 1px solid var(--border-color); } .search-container { display: flex; margin-top: 10px; gap: 5px; margin-bottom: 10px; } .search-container input { flex-grow: 1; padding: 8px; border-radius: 5px; border: 2px solid var(--border-color); background-color: var(--toolbar-bg); color: var(--text-color); } .note-list { display: none; margin-top: 15px; max-height: 200px; overflow-y: auto; padding: 10px; border-radius: 5px; background-color: var(--toolbar-bg); border: 2px solid var(--border-color); } .note-item { padding: 8px; margin-bottom: 5px; border-radius: 3px; cursor: pointer; background-color: rgba(255,255,255,0.1); } .note-item:hover { background-color: var(--accent-color); color: var(--bg-color); } /* 미리보기 관련 스타일 */ .preview-container { display: none; } .split-view { display: flex; gap: 15px; } .split-view textarea { width: 50%; height: 400px; } .split-view .preview-pane { width: 50%; height: 400px; overflow: auto; padding: 15px; border-radius: 5px; background-color: var(--toolbar-bg); color: var(--text-color); border: 2px solid var(--border-color); } /* PDF 내보내기 관련 스타일 */ #pdf-preview-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 10001; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; } #pdf-preview { background-color: white; padding: 20px; border-radius: 5px; max-width: 800px; width: 100%; max-height: 80vh; overflow: auto; color: black; } .pdf-controls { display: flex; justify-content: flex-end; margin-bottom: 10px; } .pdf-controls button { margin-left: 10px; } /* 로딩 표시기 */ .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 10002; } .loading-message { background-color: var(--bg-color); color: var(--text-color); padding: 15px 30px; border-radius: 5px; border: 2px solid var(--border-color); font-size: 16px; } /* 수식 입력 관련 스타일 */ .math-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 10001; } .math-content { background-color: var(--bg-color); padding: 20px; border-radius: 5px; border: 2px solid var(--border-color); max-width: 600px; width: 100%; } .math-input-area { width: 100%; margin-bottom: 10px; } .math-input-area textarea { height: 100px; margin-bottom: 10px; } .math-preview-area { background-color: var(--toolbar-bg); padding: 15px; border-radius: 5px; min-height: 50px; margin-bottom: 10px; } .math-templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px; } .math-symbols { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 5px; margin-bottom: 15px; } /* 파일 업로드 버튼 스타일 */ .file-upload { position: relative; overflow: hidden; margin: 5px; } .file-upload input[type=file] { position: absolute; top: 0; right: 0; min-width: 100%; min-height: 100%; font-size: 100px; text-align: right; filter: alpha(opacity=0); opacity: 0; outline: none; cursor: pointer; display: block; } </style> </head> <body> <div id="main-container"> <h2><img src="notepad.png" alt="아이콘" class="title-icon">메모장</h2> <div class="theme-selector"> <button class="theme-btn" onclick="changeTheme('default')">기본 테마</button> <button class="theme-btn" onclick="changeTheme('midnight')">미드나이트 블루</button> <button class="theme-btn" onclick="changeTheme('forest')">딥 포레스트</button> <button class="theme-btn" onclick="changeTheme('twilight')">트와일라잇</button> <button class="theme-btn" onclick="changeTheme('warm')">웜 톤</button> <button class="theme-btn" onclick="changeTheme('emerald')">에메랄드</button> </div> <div class="toolbar"> <button id="bold" onclick="formatText('bold')" title="굵게"><b>B</b></button> <button id="italic" onclick="formatText('italic')" title="기울임"><i>I</i></button> <button id="underline" onclick="formatText('underline')" title="밑줄"><u>U</u></button> <button id="strikethrough" onclick="formatText('strikethrough')" title="취소선"><s>S</s></button> <div class="separator"></div> <button onclick="formatText('heading1')" title="제목 1">H1</button> <button onclick="formatText('heading2')" title="제목 2">H2</button> <button onclick="formatText('heading3')" title="제목 3">H3</button> <div class="separator"></div> <button onclick="formatText('list')" title="목록">- 목록</button> <button onclick="formatText('numberedList')" title="번호 목록">1. 번호</button> <div class="separator"></div> <select class="font-size" onchange="changeFont(this.value)" title="글꼴 크기"> <option value="">글꼴 크기</option> <option value="small">작게</option> <option value="medium">보통</option> <option value="large">크게</option> <option value="x-large">매우 크게</option> </select> <select class="font-family" onchange="changeFontFamily(this.value)" title="글꼴"> <option value="">글꼴</option> <option value="Arial, sans-serif">Arial</option> <option value="'Times New Roman', serif">Times New Roman</option> <option value="'Courier New', monospace">Courier New</option> <option value="Georgia, serif">Georgia</option> <option value="Verdana, sans-serif">Verdana</option> <option value="'Nanum Gothic', sans-serif">나눔 고딕</option> <option value="'Malgun Gothic', sans-serif">맑은 고딕</option> </select> <div class="separator"></div> <input type="color" value="#E0D268" class="color-picker" onchange="changeColor(this.value)" title="글자 색상"> <button onclick="resetColor()" title="기본 색상으로 복원">기본색</button> <div class="separator"></div> <button onclick="insertDateTime()" title="날짜/시간 삽입">날짜/시간</button> <button onclick="togglePreview()" title="미리보기">미리보기</button> <div class="separator"></div> <button onclick="openMathModal()" title="수식 입력">수식</button> <div class="file-upload"> <button title="이미지 업로드">이미지</button> <input type="file" accept="image/*" onchange="uploadImage(this)" /> </div> </div> <div class="search-container"> <input type="text" id="searchInput" placeholder="메모 내용 검색..."> <button onclick="searchText()">검색</button> <button onclick="clearSearch()">지우기</button> </div> <div id="note-list" class="note-list"></div> <!-- 기본 편집 화면 --> <div id="editContainer"> <textarea id="notepad" placeholder="여기에 메모를 입력하세요..." oninput="autoSave(); updateWordCount();"></textarea> </div> <!-- 미리보기 화면 --> <div id="previewContainer" class="preview-container"> <div class="split-view"> <textarea id="splitNotepad" placeholder="여기에 메모를 입력하세요..." oninput="updatePreview(); autoSave(); updateWordCount();"></textarea> <div id="previewPane" class="preview-pane"></div> </div> </div> <!-- PDF 미리보기 컨테이너 --> <div id="pdf-preview-container"> <div id="pdf-preview"> <div class="pdf-controls"> <button onclick="exportToPDF()">PDF 저장</button> <button onclick="closePDFPreview()">닫기</button> </div> <div id="pdf-content"></div> </div> </div> <!-- 수식 입력 모달 --> <div id="mathModal" class="math-modal"> <div class="math-content"> <h3 style="color: var(--text-color);">수식 입력</h3> <div class="math-input-area"> <textarea id="mathInput" placeholder="LaTeX 수식을 입력하세요..."></textarea> <button onclick="previewMath()">미리보기</button> </div> <div id="mathPreview" class="math-preview-area"></div> <div class="math-templates"> <button onclick="insertMathTemplate('quadratic')">이차방정식</button> <button onclick="insertMathTemplate('pythagoras')">피타고라스</button> <button onclick="insertMathTemplate('derivative')">미분</button> <button onclick="insertMathTemplate('integral')">적분</button> <button onclick="insertMathTemplate('matrix')">행렬</button> <button onclick="insertMathTemplate('limit')">극한</button> </div> <div class="math-symbols"> <button onclick="insertMathSymbol('\\alpha')">α</button> <button onclick="insertMathSymbol('\\beta')">β</button> <button onclick="insertMathSymbol('\\gamma')">γ</button> <button onclick="insertMathSymbol('\\delta')">δ</button> <button onclick="insertMathSymbol('\\sum_{i=1}^{n}')">∑</button> <button onclick="insertMathSymbol('\\prod_{i=1}^{n}')">∏</button> <button onclick="insertMathSymbol('\\int_{a}^{b}')">∫</button> <button onclick="insertMathSymbol('\\frac{a}{b}')">a/b</button> <button onclick="insertMathSymbol('\\sqrt{x}')">√x</button> <button onclick="insertMathSymbol('x^{2}')">x²</button> </div> <div style="text-align: right; margin-top: 15px;"> <button onclick="insertMath()">삽입</button> <button onclick="closeMathModal()">취소</button> </div> </div> </div> <div class="status-bar"> <span id="wordCount">글자 수: 0 | 단어 수: 0 | 줄 수: 0</span> <span id="lastSaved">마지막 저장: -</span> </div> <div class="button-container"> <button onclick="saveNote()">저장</button> <button onclick="loadNote()">불러오기</button> <button onclick="clearNote()">지우기</button> <button onclick="downloadNote()">다운로드</button> <button onclick="copyToClipboard()">클립보드에 복사</button> <button onclick="createNewNote()">새 메모</button> <button onclick="toggleNoteList()">메모 목록</button> <button onclick="exportToPDFDirectly()">PDF로 내보내기</button> </div> </div> <script> // 전역 변수 let currentNoteId = 'default'; let autoSaveTimer; let notes = {}; let mathTemplates = { quadratic: "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", pythagoras: "a^2 + b^2 = c^2", derivative: "\\frac{d}{dx}f(x) = \\lim_{h \\to 0}\\frac{f(x+h) - f(x)}{h}", integral: "\\int_{a}^{b} f(x) \\, dx = F(b) - F(a)", matrix: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}", limit: "\\lim_{x \\to a} f(x) = L" };
-            // 페이지 로드 전에 테마 적용 (깜빡임 방지)
-    (function() {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
-    })();
-    
-    // 테마 변경 함수
-    function changeTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-    }
-    
-    // 자동 저장 기능
-    function autoSave() {
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(function() { saveNote(true); }, 3000);
-    }
-    
-    // 저장 함수
-    function saveNote(isAuto = false) {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        // 원본 텍스트 사용 (접힌 이미지 태그가 아닌)
-        const content = textarea.dataset.originalText || textarea.value;
+<!DOCTYPE html>
+<html lang="ko" data-theme="default">
+<head>
+    <meta charset="UTF-8">
+    <title>메모장</title>
+    <link rel="icon" href="notepad.png" type="image/png">
+    <!-- MathJax for 수식 미리보기 -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- PDF 내보내기용 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #222222;
+            --text-color: #E0D268;
+            --accent-color: #E0D268;
+            --border-color: #E0D268;
+            --toolbar-bg: #333333;
+            --font-family: 'Arial', sans-serif;
+            --icon-filter: invert(83%) sepia(32%) saturate(638%) hue-rotate(6deg) brightness(92%) contrast(93%);
+        }
+        [data-theme="midnight"] {
+            --bg-color: #121212;
+            --text-color: #A8DADC;
+            --accent-color: #004D61;
+            --border-color: #004D61;
+            --toolbar-bg: #1A1A1A;
+            --icon-filter: invert(87%) sepia(16%) saturate(523%) hue-rotate(146deg) brightness(94%) contrast(92%);
+        }
+        [data-theme="forest"] {
+            --bg-color: #1A1A1A;
+            --text-color: #E4E4E4;
+            --accent-color: #3E5641;
+            --border-color: #3E5641;
+            --toolbar-bg: #222222;
+            --icon-filter: invert(93%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(106%) contrast(92%);
+        }
+        [data-theme="twilight"] {
+            --bg-color: #2C2C2C;
+            --text-color: #B39CD0;
+            --accent-color: #FFC1CC;
+            --border-color: #FFC1CC;
+            --toolbar-bg: #333333;
+            --icon-filter: invert(80%) sepia(13%) saturate(709%) hue-rotate(223deg) brightness(91%) contrast(87%);
+        }
+        [data-theme="warm"] {
+            --bg-color: #1C1C1C;
+            --text-color: #F5E8D8;
+            --accent-color: #DAA520;
+            --border-color: #DAA520;
+            --toolbar-bg: #2A2A2A;
+            --icon-filter: invert(97%) sepia(13%) saturate(187%) hue-rotate(315deg) brightness(103%) contrast(94%);
+        }
+        [data-theme="emerald"] {
+            --bg-color: #222222;
+            --text-color: #A9DFBF;
+            --accent-color: #4A5E3D;
+            --border-color: #4A5E3D;
+            --toolbar-bg: #2E2E2E;
+            --icon-filter: invert(87%) sepia(18%) saturate(554%) hue-rotate(84deg) brightness(95%) contrast(88%);
+        }
+        body {
+            font-family: var(--font-family);
+            margin: 40px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        h2 {
+            color: #FFFFFF; /* 메모장 제목 하얀색으로 변경 */
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+        .title-icon {
+            height: 1.2em;
+            vertical-align: middle;
+            margin-right: 8px;
+            filter: var(--icon-filter); /* 테마에 따라 아이콘 색상 변경 */
+        }
+        textarea {
+            width: 100%;
+            height: 400px;
+            font-size: 16px;
+            padding: 15px;
+            box-sizing: border-box;
+            background-color: var(--toolbar-bg);
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            line-height: 1.5;
+            font-family: inherit;
+            resize: vertical;
+        }
+        textarea:focus {
+            outline: none;
+            box-shadow: 0 0 5px var(--accent-color);
+        }
+        button { 
+            margin: 5px;
+            padding: 8px 15px;
+            font-size: 14px;
+            background-color: var(--toolbar-bg);
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 15px;
+        }
+        .toolbar {
+            background-color: var(--toolbar-bg);
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .toolbar button {
+            margin: 2px;
+            padding: 5px 10px;
+        }
+        .color-picker {
+            height: 30px;
+            width: 30px;
+            padding: 0;
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            background-color: transparent;
+            cursor: pointer;
+        }
+        .font-size, .font-family {
+            background-color: var(--toolbar-bg);
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .separator {
+            width: 1px;
+            height: 30px;
+            background-color: var(--border-color);
+            margin: 0 5px;
+        }
+        .active {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+        .theme-selector {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .theme-btn {
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            background-color: var(--toolbar-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        .search-container {
+            display: flex;
+            margin-top: 10px;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .search-container input {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: 5px;
+            border: 2px solid var(--border-color);
+            background-color: var(--toolbar-bg);
+            color: var(--text-color);
+        }
+        .note-list {
+            display: none;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: var(--toolbar-bg);
+            border: 2px solid var(--border-color);
+        }
+        .note-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            background-color: rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .note-item:hover {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+        .note-item .delete-btn {
+            background-color: rgba(255, 0, 0, 0.3);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 5px;
+            margin: 0;
+            font-size: 12px;
+        }
+        .note-item .delete-btn:hover {
+            background-color: rgba(255, 0, 0, 0.7);
+        }
+        /* 미리보기 관련 스타일 */
+        .preview-container { display: none; }
+        .split-view { display: flex; gap: 15px; }
+        .split-view textarea { width: 50%; height: 400px; }
+        .split-view .preview-pane {
+            width: 50%; height: 400px; overflow: auto;
+            padding: 15px; border-radius: 5px;
+            background-color: var(--toolbar-bg);
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+        }
+        /* PDF 내보내기 관련 스타일 */
+        #pdf-preview-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 10001;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #pdf-preview {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: auto;
+            color: black;
+        }
+        .pdf-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .pdf-controls button {
+            margin-left: 10px;
+        }
+        /* 로딩 표시기 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10002;
+        }
+        .loading-message {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 15px 30px;
+            border-radius: 5px;
+            border: 2px solid var(--border-color);
+            font-size: 16px;
+        }
+        /* 수식 입력 관련 스타일 */
+        .math-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+        }
+        .math-content {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 5px;
+            border: 2px solid var(--border-color);
+            max-width: 600px;
+            width: 100%;
+        }
+        .math-input-area {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .math-input-area textarea {
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        .math-preview-area {
+            background-color: var(--toolbar-bg);
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 50px;
+            margin-bottom: 10px;
+        }
+        .math-templates {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .math-symbols {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        /* 파일 업로드 버튼 스타일 */
+        .file-upload {
+            position: relative;
+            overflow: hidden;
+            margin: 5px;
+        }
+        .file-upload input[type=file] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 100%;
+            min-height: 100%;
+            font-size: 100px;
+            text-align: right;
+            filter: alpha(opacity=0);
+            opacity: 0;
+            outline: none;
+            cursor: pointer;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="main-container">
+        <h2><img src="notepad.png" alt="아이콘" class="title-icon">메모장</h2>
+        <div class="theme-selector">
+            <button class="theme-btn" onclick="changeTheme('default')">기본 테마</button>
+            <button class="theme-btn" onclick="changeTheme('midnight')">미드나이트 블루</button>
+            <button class="theme-btn" onclick="changeTheme('forest')">딥 포레스트</button>
+            <button class="theme-btn" onclick="changeTheme('twilight')">트와일라잇</button>
+            <button class="theme-btn" onclick="changeTheme('warm')">웜 톤</button>
+            <button class="theme-btn" onclick="changeTheme('emerald')">에메랄드</button>
+        </div>
+        <div class="toolbar">
+            <button id="bold" onclick="formatText('bold')" title="굵게"><b>B</b></button>
+            <button id="italic" onclick="formatText('italic')" title="기울임"><i>I</i></button>
+            <button id="underline" onclick="formatText('underline')" title="밑줄"><u>U</u></button>
+            <button id="strikethrough" onclick="formatText('strikethrough')" title="취소선"><s>S</s></button>
+            <div class="separator"></div>
+            <button onclick="formatText('heading1')" title="제목 1">H1</button>
+            <button onclick="formatText('heading2')" title="제목 2">H2</button>
+            <button onclick="formatText('heading3')" title="제목 3">H3</button>
+            <div class="separator"></div>
+            <button onclick="formatText('list')" title="목록">-  목록</button>
+            <button onclick="formatText('numberedList')" title="번호 목록">1. 번호</button>
+            <div class="separator"></div>
+            <select class="font-size" onchange="changeFont(this.value)" title="글꼴 크기">
+                <option value="">글꼴 크기</option>
+                <option value="small">작게</option>
+                <option value="medium">보통</option>
+                <option value="large">크게</option>
+                <option value="x-large">매우 크게</option>
+            </select>
+            <select class="font-family" onchange="changeFontFamily(this.value)" title="글꼴">
+                <option value="">글꼴</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+                <option value="'Nanum Gothic', sans-serif">나눔 고딕</option>
+                <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
+            </select>
+            <div class="separator"></div>
+            <input type="color" value="#E0D268" class="color-picker" onchange="changeColor(this.value)" title="글자 색상">
+            <button onclick="resetColor()" title="기본 색상으로 복원">기본색</button>
+            <div class="separator"></div>
+            <button onclick="insertDateTime()" title="날짜/시간 삽입">날짜/시간</button>
+            <button onclick="togglePreview()" title="미리보기">미리보기</button>
+            <div class="separator"></div>
+            <button onclick="openMathModal()" title="수식 입력">수식</button>
+            <div class="file-upload">
+                <button title="이미지 업로드">이미지</button>
+                <input type="file" accept="image/*" onchange="uploadImage(this)" />
+            </div>
+        </div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="메모 내용 검색...">
+            <button onclick="searchText()">검색</button>
+            <button onclick="clearSearch()">지우기</button>
+        </div>
+        <div id="note-list" class="note-list"></div>
+        <!-- 기본 편집 화면 -->
+        <div id="editContainer">
+            <textarea id="notepad" placeholder="여기에 메모를 입력하세요..." oninput="autoSave(); updateWordCount();"></textarea>
+        </div>
+        <!-- 미리보기 화면 -->
+        <div id="previewContainer" class="preview-container">
+            <div class="split-view">
+                <textarea id="splitNotepad" placeholder="여기에 메모를 입력하세요..." oninput="updatePreview(); autoSave(); updateWordCount();"></textarea>
+                <div id="previewPane" class="preview-pane"></div>
+            </div>
+        </div>
+        <!-- PDF 미리보기 컨테이너 -->
+        <div id="pdf-preview-container">
+            <div id="pdf-preview">
+                <div class="pdf-controls">
+                    <button onclick="exportToPDF()">PDF 저장</button>
+                    <button onclick="closePDFPreview()">닫기</button>
+                </div>
+                <div id="pdf-content"></div>
+            </div>
+        </div>
+        <!-- 수식 입력 모달 -->
+        <div id="mathModal" class="math-modal">
+            <div class="math-content">
+                <h3 style="color: var(--text-color);">수식 입력</h3>
+                <div class="math-input-area">
+                    <textarea id="mathInput" placeholder="LaTeX 수식을 입력하세요..."></textarea>
+                    <button onclick="previewMath()">미리보기</button>
+                </div>
+                <div id="mathPreview" class="math-preview-area"></div>
+                <div class="math-templates">
+                    <button onclick="insertMathTemplate('quadratic')">이차방정식</button>
+                    <button onclick="insertMathTemplate('pythagoras')">피타고라스</button>
+                    <button onclick="insertMathTemplate('derivative')">미분</button>
+                    <button onclick="insertMathTemplate('integral')">적분</button>
+                    <button onclick="insertMathTemplate('matrix')">행렬</button>
+                    <button onclick="insertMathTemplate('limit')">극한</button>
+                </div>
+                <div class="math-symbols">
+                    <button onclick="insertMathSymbol('\\alpha')">α</button>
+                    <button onclick="insertMathSymbol('\\beta')">β</button>
+                    <button onclick="insertMathSymbol('\\gamma')">γ</button>
+                    <button onclick="insertMathSymbol('\\delta')">δ</button>
+                    <button onclick="insertMathSymbol('\\sum_{i=1}^{n}')">∑</button>
+                    <button onclick="insertMathSymbol('\\prod_{i=1}^{n}')">∏</button>
+                    <button onclick="insertMathSymbol('\\int_{a}^{b}')">∫</button>
+                    <button onclick="insertMathSymbol('\\frac{a}{b}')">a/b</button>
+                    <button onclick="insertMathSymbol('\\sqrt{x}')">√x</button>
+                    <button onclick="insertMathSymbol('x^{2}')">x²</button>
+                </div>
+                <div style="text-align: right; margin-top: 15px;">
+                    <button onclick="insertMath()">삽입</button>
+                    <button onclick="closeMathModal()">취소</button>
+                </div>
+            </div>
+        </div>
+        <div class="status-bar">
+            <span id="wordCount">글자 수: 0 | 단어 수: 0 | 줄 수: 0</span>
+            <span id="lastSaved">마지막 저장: -</span>
+        </div>
+        <div class="button-container">
+            <button onclick="saveNote()">저장</button>
+            <button onclick="loadNote()">불러오기</button>
+            <button onclick="clearNote()">지우기</button>
+            <button onclick="downloadNote()">다운로드</button>
+            <button onclick="copyToClipboard()">클립보드에 복사</button>
+            <button onclick="createNewNote()">새 메모</button>
+            <button onclick="toggleNoteList()">메모 목록</button>
+            <button onclick="exportToPDFDirectly()">PDF로 내보내기</button>
+        </div>
+    </div>
+    <script>
+        // 전역 변수
+        let currentNoteId = 'default';
+        let autoSaveTimer = null; // Initialize with null to prevent "not defined" error
+        let notes = {};
+        let mathTemplates = {
+            quadratic: "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
+            pythagoras: "a^2 + b^2 = c^2",
+            derivative: "\\frac{d}{dx}f(x) = \\lim_{h \\to 0}\\frac{f(x+h) - f(x)}{h}",
+            integral: "\\int_{a}^{b} f(x) \\, dx = F(b) - F(a)",
+            matrix: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}",
+            limit: "\\lim_{x \\to a} f(x) = L"
+        };
         
-        notes[currentNoteId] = { content: content, lastModified: new Date().toLocaleString() };
-        localStorage.setItem('notes', JSON.stringify(notes));
-        localStorage.setItem('noteIds', JSON.stringify(Object.keys(notes)));
-        localStorage.setItem('currentNoteId', currentNoteId);
-        updateLastSaved(isAuto);
-    }
-    
-    // 마지막 저장 시간 업데이트
-    function updateLastSaved(isAuto) {
-        const now = new Date().toLocaleString();
-        document.getElementById('lastSaved').textContent = '마지막 저장: ' + now + (isAuto ? ' (자동)' : '');
-    }
-    
-    // 불러오기 함수
-    function loadNote() {
-        const savedNotes = localStorage.getItem('notes');
-        if (savedNotes) {
-            notes = JSON.parse(savedNotes);
-            const savedCurrentNoteId = localStorage.getItem('currentNoteId');
-            if (savedCurrentNoteId) currentNoteId = savedCurrentNoteId;
-            if (notes[currentNoteId]) {
-                const content = notes[currentNoteId].content;
-                document.getElementById('notepad').value = content;
-                document.getElementById('splitNotepad').value = content;
+        // 페이지 로드 전에 테마 적용 (깜빡임 방지)
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+        
+        // 테마 변경 함수
+        function changeTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+        }
+        
+        // 자동 저장 기능
+        function autoSave() {
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer); // Add check to prevent errors
+            }
+            autoSaveTimer = setTimeout(function() { saveNote(true); }, 3000);
+        }
+        
+        // 저장 함수
+        function saveNote(isAuto = false) {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            // 원본 텍스트 사용 (접힌 이미지 태그가 아닌)
+            const content = textarea.dataset.originalText || textarea.value;
+            
+            notes[currentNoteId] = { content: content, lastModified: new Date().toLocaleString() };
+            localStorage.setItem('notes', JSON.stringify(notes));
+            localStorage.setItem('noteIds', JSON.stringify(Object.keys(notes)));
+            localStorage.setItem('currentNoteId', currentNoteId);
+            updateLastSaved(isAuto);
+        }
+        
+        // 마지막 저장 시간 업데이트
+        function updateLastSaved(isAuto) {
+            const now = new Date().toLocaleString();
+            document.getElementById('lastSaved').textContent = '마지막 저장: ' + now + (isAuto ? ' (자동)' : '');
+        }
+        
+        // 불러오기 함수
+        function loadNote() {
+            const savedNotes = localStorage.getItem('notes');
+            if (savedNotes) {
+                notes = JSON.parse(savedNotes);
+                const savedCurrentNoteId = localStorage.getItem('currentNoteId');
+                if (savedCurrentNoteId) currentNoteId = savedCurrentNoteId;
+                if (notes[currentNoteId]) {
+                    const content = notes[currentNoteId].content;
+                    document.getElementById('notepad').value = content;
+                    document.getElementById('splitNotepad').value = content;
+                    
+                    // 원본 텍스트 저장
+                    document.getElementById('notepad').dataset.originalText = content;
+                    document.getElementById('splitNotepad').dataset.originalText = content;
+                    
+                    // 이미지 태그 접기 적용
+                    foldImageTags(document.getElementById('notepad'));
+                    foldImageTags(document.getElementById('splitNotepad'));
+                    
+                    if (isPreviewMode()) updatePreview();
+                    updateWordCount();
+                    alert('메모를 불러왔습니다!');
+                } else alert('저장된 메모가 없습니다.');
+            } else alert('저장된 메모가 없습니다.');
+            updateNoteList();
+        }
+        
+        // 메모 지우기
+        function clearNote() {
+            if(confirm('정말로 메모를 지우시겠습니까?')) {
+                if (isPreviewMode()) {
+                    document.getElementById('splitNotepad').value = '';
+                    document.getElementById('splitNotepad').dataset.originalText = '';
+                    updatePreview();
+                } else {
+                    document.getElementById('notepad').value = '';
+                    document.getElementById('notepad').dataset.originalText = '';
+                }
+                updateWordCount();
+            }
+        }
+        
+        // 메모 삭제 함수
+        function deleteNote(noteId, event) {
+            // 이벤트 버블링 방지
+            event.stopPropagation();
+            
+            if (confirm('정말로 이 메모를 삭제하시겠습니까?')) {
+                // 메모 삭제
+                delete notes[noteId];
                 
-                // 원본 텍스트 저장
-                document.getElementById('notepad').dataset.originalText = content;
-                document.getElementById('splitNotepad').dataset.originalText = content;
+                // 로컬 스토리지 업데이트
+                localStorage.setItem('notes', JSON.stringify(notes));
+                localStorage.setItem('noteIds', JSON.stringify(Object.keys(notes)));
+                
+                // 현재 메모가 삭제된 메모인 경우 다른 메모로 전환
+                if (noteId === currentNoteId) {
+                    const noteIds = Object.keys(notes);
+                    if (noteIds.length > 0) {
+                        currentNoteId = noteIds[0];
+                        loadSpecificNote(currentNoteId);
+                    } else {
+                        // 메모가 없는 경우 빈 메모 생성
+                        currentNoteId = 'default';
+                        document.getElementById('notepad').value = '';
+                        document.getElementById('notepad').dataset.originalText = '';
+                        document.getElementById('splitNotepad').value = '';
+                        document.getElementById('splitNotepad').dataset.originalText = '';
+                        if (isPreviewMode()) updatePreview();
+                        updateWordCount();
+                    }
+                    localStorage.setItem('currentNoteId', currentNoteId);
+                }
+                
+                // 메모 목록 업데이트
+                updateNoteList();
+            }
+        }
+        
+        // 다운로드 함수
+        function downloadNote() {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            // 원본 텍스트 사용
+            const text = textarea.dataset.originalText || textarea.value;
+            
+            if (!text) return alert('다운로드할 내용이 없습니다.');
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const filename = prompt('파일 이름을 입력하세요:', 'memo.txt');
+            if (!filename) return;
+            a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+        }
+        
+        // 클립보드에 복사
+        function copyToClipboard() {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            // 원본 텍스트 사용
+            const originalText = textarea.dataset.originalText || textarea.value;
+            
+            // 임시 textarea 생성하여 원본 텍스트 복사
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = originalText;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextarea);
+            
+            alert('클립보드에 복사되었습니다!');
+        }
+        
+        // 텍스트 서식 지정
+        function formatText(format) {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            
+            // 포커스를 줘서 원본 텍스트로 전환
+            textarea.focus();
+            
+            const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
+            let formattedText = '';
+            switch(format) {
+                case 'bold': formattedText = `**${selectedText}**`; break;
+                case 'italic': formattedText = `*${selectedText}*`; break;
+                case 'underline': formattedText = `_${selectedText}_`; break;
+                case 'strikethrough': formattedText = `~~${selectedText}~~`; break;
+                case 'heading1': formattedText = `\n# ${selectedText}\n`; break;
+                case 'heading2': formattedText = `\n## ${selectedText}\n`; break;
+                case 'heading3': formattedText = `\n### ${selectedText}\n`; break;
+                case 'list': formattedText = selectedText.split('\n').map(line => `-  ${line}`).join('\n'); break;
+                case 'numberedList': 
+                    // 번호가 자동으로 증가하도록 수정
+                    formattedText = selectedText.split('\n').map((line, i) => `${i+1}. ${line}`).join('\n'); 
+                    break;
+            }
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.dataset.originalText = textarea.value;
+            
+            // 포커스 유지 및 선택 범위 설정
+            textarea.focus();
+            textarea.selectionStart = start;
+            textarea.selectionEnd = start + formattedText.length;
+            
+            toggleButtonState(format);
+            if (isPreviewMode()) updatePreview();
+            autoSave();
+            updateWordCount();
+            
+            // 다시 이미지 태그 접기 적용
+            setTimeout(() => {
+                foldImageTags(textarea);
+            }, 100);
+        }
+        
+        // 버튼 상태 토글
+        function toggleButtonState(format) {
+            const button = document.getElementById(format);
+            if (button) {
+                button.classList.toggle('active');
+                setTimeout(() => { button.classList.remove('active'); }, 300);
+            }
+        }
+        
+        // 글꼴 크기 변경
+        function changeFont(size) {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            
+            // 포커스를 줘서 원본 텍스트로 전환
+            textarea.focus();
+            
+            const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
+            if (!selectedText) return alert('글꼴 크기를 변경할 텍스트를 먼저 선택하세요.');
+            let sizeTag = '';
+            switch(size) {
+                case 'small': sizeTag = '<small>'; break;
+                case 'medium': sizeTag = '<medium>'; break;
+                case 'large': sizeTag = '<large>'; break;
+                case 'x-large': sizeTag = '<x-large>'; break;
+                default: return;
+            }
+            const formattedText = `${sizeTag}${selectedText}</${size}>`;
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.dataset.originalText = textarea.value;
+            
+            textarea.focus();
+            if (isPreviewMode()) updatePreview();
+            autoSave();
+            updateWordCount();
+            
+            // 다시 이미지 태그 접기 적용
+            setTimeout(() => {
+                foldImageTags(textarea);
+            }, 100);
+        }
+        
+        // 글꼴 변경
+        function changeFontFamily(fontFamily) {
+            if (fontFamily) {
+                document.documentElement.style.setProperty('--font-family', fontFamily);
+                localStorage.setItem('fontFamily', fontFamily);
+            }
+        }
+        
+        // 색상 변경 - 텍스트 선택 오류 수정
+        function changeColor(color) {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            
+            // 포커스를 줘서 원본 텍스트로 전환
+            textarea.focus();
+            
+            // 선택된 텍스트 확인 및 저장
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            
+            // 선택된 텍스트가 없으면 경고
+            if (start === end) {
+                return alert('색상을 변경할 텍스트를 먼저 선택하세요.');
+            }
+            
+            const selectedText = textarea.value.substring(start, end);
+            const formattedText = `<color=${color}>${selectedText}</color>`;
+            
+            // 텍스트 교체
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.dataset.originalText = textarea.value;
+            
+            // 포커스 유지 및 커서 위치 설정
+            textarea.focus();
+            textarea.selectionStart = start;
+            textarea.selectionEnd = start + formattedText.length;
+            
+            if (isPreviewMode()) updatePreview();
+            autoSave();
+            updateWordCount();
+            
+            // 다시 이미지 태그 접기 적용
+            setTimeout(() => {
+                foldImageTags(textarea);
+            }, 100);
+        }
+        
+        // 색상 초기화
+        function resetColor() {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            
+            // 포커스를 줘서 원본 텍스트로 전환
+            textarea.focus();
+            
+            const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
+            if (!selectedText) return alert('색상을 초기화할 텍스트를 먼저 선택하세요.');
+            const regex = /<color=[^>]+>(.+?)<\/color>/g;
+            const formattedText = selectedText.replace(regex, '$1');
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.dataset.originalText = textarea.value;
+            
+            textarea.focus();
+            if (isPreviewMode()) updatePreview();
+            autoSave();
+            updateWordCount();
+            
+            // 다시 이미지 태그 접기 적용
+            setTimeout(() => {
+                foldImageTags(textarea);
+            }, 100);
+        }
+        
+        // 날짜/시간 삽입
+        function insertDateTime() {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            
+            // 포커스를 줘서 원본 텍스트로 전환
+            textarea.focus();
+            
+            const cursorPos = textarea.selectionStart;
+            const now = new Date().toLocaleString();
+            const dateTimeText = `[${now}] `;
+            textarea.value = textarea.value.substring(0, cursorPos) + dateTimeText + textarea.value.substring(cursorPos);
+            textarea.dataset.originalText = textarea.value;
+            
+            textarea.focus();
+            textarea.selectionStart = cursorPos + dateTimeText.length;
+            textarea.selectionEnd = cursorPos + dateTimeText.length;
+            
+            if (isPreviewMode()) updatePreview();
+            autoSave();
+            updateWordCount();
+            
+            // 다시 이미지 태그 접기 적용
+            setTimeout(() => {
+                foldImageTags(textarea);
+            }, 100);
+        }
+        
+        // 미리보기 모드 토글
+        function togglePreview() {
+            const editContainer = document.getElementById('editContainer');
+            const previewContainer = document.getElementById('previewContainer');
+            if (editContainer.style.display === 'none') {
+                editContainer.style.display = 'block';
+                previewContainer.style.display = 'none';
+                
+                // 원본 텍스트 복원
+                const originalText = document.getElementById('splitNotepad').dataset.originalText;
+                if (originalText) {
+                    document.getElementById('notepad').value = originalText;
+                    document.getElementById('notepad').dataset.originalText = originalText;
+                } else {
+                    document.getElementById('notepad').value = document.getElementById('splitNotepad').value;
+                }
                 
                 // 이미지 태그 접기 적용
                 foldImageTags(document.getElementById('notepad'));
-                foldImageTags(document.getElementById('splitNotepad'));
-                
-                if (isPreviewMode()) updatePreview();
-                updateWordCount();
-                alert('메모를 불러왔습니다!');
-            } else alert('저장된 메모가 없습니다.');
-        } else alert('저장된 메모가 없습니다.');
-        updateNoteList();
-    }
-    
-    // 메모 지우기
-    function clearNote() {
-        if(confirm('정말로 메모를 지우시겠습니까?')) {
-            if (isPreviewMode()) {
-                document.getElementById('splitNotepad').value = '';
-                document.getElementById('splitNotepad').dataset.originalText = '';
-                updatePreview();
             } else {
-                document.getElementById('notepad').value = '';
-                document.getElementById('notepad').dataset.originalText = '';
-            }
-            updateWordCount();
-        }
-    }
-    
-    // 다운로드 함수
-    function downloadNote() {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        // 원본 텍스트 사용
-        const text = textarea.dataset.originalText || textarea.value;
-        
-        if (!text) return alert('다운로드할 내용이 없습니다.');
-        const blob = new Blob([text], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const filename = prompt('파일 이름을 입력하세요:', 'memo.txt');
-        if (!filename) return;
-        a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
-    }
-    
-    // 클립보드에 복사
-    function copyToClipboard() {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        // 원본 텍스트 사용
-        const originalText = textarea.dataset.originalText || textarea.value;
-        
-        // 임시 textarea 생성하여 원본 텍스트 복사
-        const tempTextarea = document.createElement('textarea');
-        tempTextarea.value = originalText;
-        document.body.appendChild(tempTextarea);
-        tempTextarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempTextarea);
-        
-        alert('클립보드에 복사되었습니다!');
-    }
-    
-    // 텍스트 서식 지정
-    function formatText(format) {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        
-        // 포커스를 줘서 원본 텍스트로 전환
-        textarea.focus();
-        
-        const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
-        let formattedText = '';
-        switch(format) {
-            case 'bold': formattedText = `**${selectedText}**`; break;
-            case 'italic': formattedText = `*${selectedText}*`; break;
-            case 'underline': formattedText = `_${selectedText}_`; break;
-            case 'strikethrough': formattedText = `~~${selectedText}~~`; break;
-            case 'heading1': formattedText = `\n# ${selectedText}\n`; break;
-            case 'heading2': formattedText = `\n## ${selectedText}\n`; break;
-            case 'heading3': formattedText = `\n### ${selectedText}\n`; break;
-            case 'list': formattedText = selectedText.split('\n').map(line => `-  ${line}`).join('\n'); break;
-            case 'numberedList': 
-                // 번호가 자동으로 증가하도록 수정
-                formattedText = selectedText.split('\n').map((line, i) => `${i+1}. ${line}`).join('\n'); 
-                break;
-        }
-        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-        textarea.dataset.originalText = textarea.value;
-        
-        // 포커스 유지 및 선택 범위 설정
-        textarea.focus();
-        textarea.selectionStart = start;
-        textarea.selectionEnd = start + formattedText.length;
-        
-        toggleButtonState(format);
-        if (isPreviewMode()) updatePreview();
-        autoSave();
-        updateWordCount();
-        
-        // 다시 이미지 태그 접기 적용
-        setTimeout(() => {
-            foldImageTags(textarea);
-        }, 100);
-    }
-    
-    // 버튼 상태 토글
-    function toggleButtonState(format) {
-        const button = document.getElementById(format);
-        if (button) {
-            button.classList.toggle('active');
-            setTimeout(() => { button.classList.remove('active'); }, 300);
-        }
-    }
-    
-    // 글꼴 크기 변경
-    function changeFont(size) {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        
-        // 포커스를 줘서 원본 텍스트로 전환
-        textarea.focus();
-        
-        const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
-        if (!selectedText) return alert('글꼴 크기를 변경할 텍스트를 먼저 선택하세요.');
-        let sizeTag = '';
-        switch(size) {
-            case 'small': sizeTag = '<small>'; break;
-            case 'medium': sizeTag = '<medium>'; break;
-            case 'large': sizeTag = '<large>'; break;
-            case 'x-large': sizeTag = '<x-large>'; break;
-            default: return;
-        }
-        const formattedText = `${sizeTag}${selectedText}</${size}>`;
-        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-        textarea.dataset.originalText = textarea.value;
-        
-        textarea.focus();
-        if (isPreviewMode()) updatePreview();
-        autoSave();
-        updateWordCount();
-        
-        // 다시 이미지 태그 접기 적용
-        setTimeout(() => {
-            foldImageTags(textarea);
-        }, 100);
-    }
-    
-    // 글꼴 변경
-    function changeFontFamily(fontFamily) {
-        if (fontFamily) {
-            document.documentElement.style.setProperty('--font-family', fontFamily);
-            localStorage.setItem('fontFamily', fontFamily);
-        }
-    }
-    
-    // 색상 변경 - 텍스트 선택 오류 수정
-    function changeColor(color) {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        
-        // 포커스를 줘서 원본 텍스트로 전환
-        textarea.focus();
-        
-        // 선택된 텍스트 확인 및 저장
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        
-        // 선택된 텍스트가 없으면 경고
-        if (start === end) {
-            return alert('색상을 변경할 텍스트를 먼저 선택하세요.');
-        }
-        
-        const selectedText = textarea.value.substring(start, end);
-        const formattedText = `<color=${color}>${selectedText}</color>`;
-        
-        // 텍스트 교체
-        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-        textarea.dataset.originalText = textarea.value;
-        
-        // 포커스 유지 및 커서 위치 설정
-        textarea.focus();
-        textarea.selectionStart = start;
-        textarea.selectionEnd = start + formattedText.length;
-        
-        if (isPreviewMode()) updatePreview();
-        autoSave();
-        updateWordCount();
-        
-        // 다시 이미지 태그 접기 적용
-        setTimeout(() => {
-            foldImageTags(textarea);
-        }, 100);
-    }
-    
-    // 색상 초기화
-    function resetColor() {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        
-        // 포커스를 줘서 원본 텍스트로 전환
-        textarea.focus();
-        
-        const start = textarea.selectionStart, end = textarea.selectionEnd, selectedText = textarea.value.substring(start, end);
-        if (!selectedText) return alert('색상을 초기화할 텍스트를 먼저 선택하세요.');
-        const regex = /<color=[^>]+>(.+?)<\/color>/g;
-        const formattedText = selectedText.replace(regex, '$1');
-        textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
-        textarea.dataset.originalText = textarea.value;
-        
-        textarea.focus();
-        if (isPreviewMode()) updatePreview();
-        autoSave();
-        updateWordCount();
-        
-        // 다시 이미지 태그 접기 적용
-        setTimeout(() => {
-            foldImageTags(textarea);
-        }, 100);
-    }
-    
-    // 날짜/시간 삽입
-    function insertDateTime() {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        
-        // 포커스를 줘서 원본 텍스트로 전환
-        textarea.focus();
-        
-        const cursorPos = textarea.selectionStart;
-        const now = new Date().toLocaleString();
-        const dateTimeText = `[${now}] `;
-        textarea.value = textarea.value.substring(0, cursorPos) + dateTimeText + textarea.value.substring(cursorPos);
-        textarea.dataset.originalText = textarea.value;
-        
-        textarea.focus();
-        textarea.selectionStart = cursorPos + dateTimeText.length;
-        textarea.selectionEnd = cursorPos + dateTimeText.length;
-        
-        if (isPreviewMode()) updatePreview();
-        autoSave();
-        updateWordCount();
-        
-        // 다시 이미지 태그 접기 적용
-        setTimeout(() => {
-            foldImageTags(textarea);
-        }, 100);
-    }
-    
-    // 미리보기 모드 토글
-    function togglePreview() {
-        const editContainer = document.getElementById('editContainer');
-        const previewContainer = document.getElementById('previewContainer');
-        if (editContainer.style.display === 'none') {
-            editContainer.style.display = 'block';
-            previewContainer.style.display = 'none';
-            
-            // 원본 텍스트 복원
-            const originalText = document.getElementById('splitNotepad').dataset.originalText;
-            if (originalText) {
-                document.getElementById('notepad').value = originalText;
-                document.getElementById('notepad').dataset.originalText = originalText;
-            } else {
-                document.getElementById('notepad').value = document.getElementById('splitNotepad').value;
-            }
-            
-            // 이미지 태그 접기 적용
-            foldImageTags(document.getElementById('notepad'));
-        } else {
-            editContainer.style.display = 'none';
-            previewContainer.style.display = 'block';
-            
-            // 원본 텍스트 복원
-            const originalText = document.getElementById('notepad').dataset.originalText;
-            if (originalText) {
-                document.getElementById('splitNotepad').value = originalText;
-                document.getElementById('splitNotepad').dataset.originalText = originalText;
-            } else {
-                document.getElementById('splitNotepad').value = document.getElementById('notepad').value;
-            }
-            
-            // 이미지 태그 접기 적용
-            foldImageTags(document.getElementById('splitNotepad'));
-            updatePreview();
-        }
-    }
-    
-    // 미리보기 모드인지 확인
-    function isPreviewMode() {
-        return document.getElementById('editContainer').style.display === 'none';
-    }
-    
-    // 미리보기 업데이트
-    function updatePreview() {
-        // 원본 텍스트 사용
-        const textarea = document.getElementById('splitNotepad');
-        const markdown = textarea.dataset.originalText || textarea.value;
-        const previewPane = document.getElementById('previewPane');
-        
-        // 이미지 태그 처리 (접기 없이 직접 표시)
-        let html = markdown.replace(/<img\s+src="([^"]+)"\s+alt="([^"]*)"\s*>/g, function(match, src, alt) {
-            return `<img src="${src}" alt="${alt}" style="max-width:100%;">`;
-        });
-        
-        // 수식 처리
-        html = html.replace(/\$\$(.*?)\$\$/gs, function(match, math) {
-            return `<div class="math">$$${math}$$</div>`;
-        });
-        
-        // 마크다운 변환
-        html = html
-            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/_(.*?)_/g, '<u>$1</u>')
-            .replace(/~~(.*?)~~/g, '<s>$1</s>')
-            .replace(/^-  (.*$)/gm, '<li>$1</li>')
-            .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
-            .replace(/<color=([^>]+)>(.*?)<\/color>/g, '<span style="color:$1">$2</span>')
-            .replace(/\n/g, '<br>');
-            
-        previewPane.innerHTML = html;
-        
-        // MathJax 렌더링
-        if (typeof MathJax !== 'undefined') {
-            MathJax.typesetPromise([previewPane]).catch(function (err) {
-                console.log('MathJax 오류:', err);
-            });
-        }
-    }
-    
-    // 이미지 태그 접기 함수
-    function foldImageTags(textarea) {
-        if (!textarea) return;
-        
-        // 원본 텍스트 저장 (아직 없는 경우)
-        if (!textarea.dataset.originalText) {
-            textarea.dataset.originalText = textarea.value;
-        }
-        
-        const originalText = textarea.dataset.originalText;
-        const selectionStart = textarea.selectionStart;
-        const selectionEnd = textarea.selectionEnd;
-        
-        // 이미지 태그 찾기
-        const regex = /<img\s+src="[^"]+"\s+alt="[^"]*"\s*>/g;
-        let match;
-        let imgCount = 1;
-        let modifiedText = originalText;
-        let offset = 0;
-        
-        // 각 이미지 태그를 <img:N> 형태로 변환
-        while ((match = regex.exec(originalText)) !== null) {
-            const imgTag = match;
-            const foldedTag = `<img:${imgCount++}>`;
-            
-            // 텍스트 대체
-            modifiedText = modifiedText.substring(0, match.index + offset) + 
-                           foldedTag + 
-                           modifiedText.substring(match.index + offset + imgTag.length);
-            
-            // 오프셋 조정
-            offset += foldedTag.length - imgTag.length;
-        }
-        
-        // 변환된 텍스트 설정
-        textarea.value = modifiedText;
-        
-        // 커서 위치 조정 (가능한 경우)
-        if (selectionStart !== undefined && selectionStart === selectionEnd) {
-            // 커서 위치만 조정 (선택 영역 없음)
-            textarea.selectionStart = Math.max(0, selectionStart);
-            textarea.selectionEnd = Math.max(0, selectionStart);
-        }
-        
-        // 포커스 이벤트 설정 (포커스 시 원본 텍스트 복원)
-        textarea.onfocus = function() {
-            if (this.dataset.originalText) {
-                this.value = this.dataset.originalText;
-            }
-        };
-        
-        // 블러 이벤트 설정 (포커스 잃을 때 다시 접기)
-        textarea.onblur = function() {
-            // 원본 텍스트 업데이트
-            this.dataset.originalText = this.value;
-            // 다시 접기
-            foldImageTags(this);
-        };
-        
-        // 입력 이벤트 설정 (입력 시 원본 텍스트 업데이트)
-        if (isPreviewMode() && textarea.id === 'splitNotepad') {
-            textarea.oninput = function() {
-                this.dataset.originalText = this.value;
-                updatePreview(); // 실시간 미리보기 업데이트
-                autoSave();
-                updateWordCount();
-            };
-        } else {
-            textarea.oninput = function() {
-                this.dataset.originalText = this.value;
-                autoSave();
-                updateWordCount();
-            };
-        }
-    }
-    
-    // 이미지 업로드 함수
-    function uploadImage(input) {
-        if (input.files && input.files) {  // 수정: input.files에서 첫 번째 파일만 사용
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const imageData = e.target.result;
+                editContainer.style.display = 'none';
+                previewContainer.style.display = 'block';
                 
-                // 현재 활성화된 텍스트 영역 가져오기
-                const textarea = isPreviewMode() ? 
-                    document.getElementById('splitNotepad') : 
-                    document.getElementById('notepad');
-                
-                // 포커스 설정하여 원본 텍스트로 전환
-                textarea.focus();
-                
-                // 커서 위치 가져오기
-                const cursorPos = textarea.selectionStart;
-                
-                // 이미지 태그 생성
-                const imgTag = `\n<img src="${imageData}" alt="업로드 이미지">\n`;
-                
-                // 텍스트 영역에 이미지 태그 삽입
-                textarea.value = 
-                    textarea.value.substring(0, cursorPos) + 
-                    imgTag + 
-                    textarea.value.substring(cursorPos);
-                
-                // 원본 텍스트 업데이트
-                textarea.dataset.originalText = textarea.value;
-                
-                // 커서 위치 업데이트
-                textarea.selectionStart = cursorPos + imgTag.length;
-                textarea.selectionEnd = cursorPos + imgTag.length;
-                
-                // 미리보기 업데이트
-                if (isPreviewMode()) {
-                    updatePreview();
+                // 원본 텍스트 복원
+                const originalText = document.getElementById('notepad').dataset.originalText;
+                if (originalText) {
+                    document.getElementById('splitNotepad').value = originalText;
+                    document.getElementById('splitNotepad').dataset.originalText = originalText;
+                } else {
+                    document.getElementById('splitNotepad').value = document.getElementById('notepad').value;
                 }
                 
-                // 자동 저장
-                autoSave();
-                
-                // 단어 수 업데이트
-                updateWordCount();
-                
                 // 이미지 태그 접기 적용
-                setTimeout(() => {
-                    foldImageTags(textarea);
-                }, 100);
+                foldImageTags(document.getElementById('splitNotepad'));
+                updatePreview();
+            }
+        }
+        
+        // 미리보기 모드인지 확인
+        function isPreviewMode() {
+            return document.getElementById('editContainer').style.display === 'none';
+        }
+        
+        // 미리보기 업데이트
+        function updatePreview() {
+            // 원본 텍스트 사용
+            const textarea = document.getElementById('splitNotepad');
+            const markdown = textarea.dataset.originalText || textarea.value;
+            const previewPane = document.getElementById('previewPane');
+            
+            // 이미지 태그 처리 (접기 없이 직접 표시)
+            let html = markdown.replace(/<img\s+src="([^"]+)"\s+alt="([^"]*)"\s*>/g, function(match, src, alt) {
+                return `<img src="${src}" alt="${alt}" style="max-width:100%;">`;
+            });
+            
+            // 수식 처리
+            html = html.replace(/\$\$(.*?)\$\$/gs, function(match, math) {
+                return `<div class="math">$$${math}$$</div>`;
+            });
+            
+            // 마크다운 변환
+            html = html
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/_(.*?)_/g, '<u>$1</u>')
+                .replace(/~~(.*?)~~/g, '<s>$1</s>')
+                .replace(/^-  (.*$)/gm, '<li>$1</li>')
+                .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+                .replace(/<color=([^>]+)>(.*?)<\/color>/g, '<span style="color:$1">$2</span>')
+                .replace(/\n/g, '<br>');
+                
+            previewPane.innerHTML = html;
+            
+            // MathJax 렌더링
+            if (typeof MathJax !== 'undefined') {
+                MathJax.typesetPromise([previewPane]).catch(function (err) {
+                    console.log('MathJax 오류:', err);
+                });
+            }
+        }
+        
+        // 이미지 태그 접기 함수
+        function foldImageTags(textarea) {
+            if (!textarea) return;
+            
+            // 원본 텍스트 저장 (아직 없는 경우)
+            if (!textarea.dataset.originalText) {
+                textarea.dataset.originalText = textarea.value;
+            }
+            
+            const originalText = textarea.dataset.originalText;
+            const selectionStart = textarea.selectionStart;
+            const selectionEnd = textarea.selectionEnd;
+            
+            // 이미지 태그 찾기
+            const regex = /<img\s+src="[^"]+"\s+alt="[^"]*"\s*>/g;
+            let match;
+            let imgCount = 1;
+            let modifiedText = originalText;
+            let offset = 0;
+            
+            // 각 이미지 태그를 <img:N> 형태로 변환
+            while ((match = regex.exec(originalText)) !== null) {
+                const imgTag = match[0];
+                const foldedTag = `<img:${imgCount++}>`;
+                
+                // 텍스트 대체
+                modifiedText = modifiedText.substring(0, match.index + offset) + 
+                               foldedTag + 
+                               modifiedText.substring(match.index + offset + imgTag.length);
+                
+                // 오프셋 조정
+                offset += foldedTag.length - imgTag.length;
+            }
+            
+            // 변환된 텍스트 설정
+            textarea.value = modifiedText;
+            
+            // 커서 위치 조정 (가능한 경우)
+            if (selectionStart !== undefined && selectionStart === selectionEnd) {
+                // 커서 위치만 조정 (선택 영역 없음)
+                textarea.selectionStart = Math.max(0, selectionStart);
+                textarea.selectionEnd = Math.max(0, selectionStart);
+            }
+            
+            // 포커스 이벤트 설정 (포커스 시 원본 텍스트 복원)
+            textarea.onfocus = function() {
+                if (this.dataset.originalText) {
+                    this.value = this.dataset.originalText;
+                }
             };
             
-            reader.readAsDataURL(input.files);  // 수정: input.files로 첫 번째 파일만 읽기
+            // 블러 이벤트 설정 (포커스 잃을 때 다시 접기)
+            textarea.onblur = function() {
+                // 원본 텍스트 업데이트
+                this.dataset.originalText = this.value;
+                // 다시 접기
+                foldImageTags(this);
+            };
             
-            // 파일 입력 필드 초기화 (같은 파일을 다시 선택할 수 있도록)
-            input.value = '';
+            // 입력 이벤트 설정 (입력 시 원본 텍스트 업데이트)
+            if (isPreviewMode() && textarea.id === 'splitNotepad') {
+                textarea.oninput = function() {
+                    this.dataset.originalText = this.value;
+                    updatePreview(); // 실시간 미리보기 업데이트
+                    autoSave();
+                    updateWordCount();
+                };
+            } else {
+                textarea.oninput = function() {
+                    this.dataset.originalText = this.value;
+                    autoSave();
+                    updateWordCount();
+                };
+            }
         }
-    }
-    
-    // 수식 입력 모달 열기
-    function openMathModal() {
-        document.getElementById('mathModal').style.display = 'flex';
-        document.getElementById('mathInput').focus();
-    }
-    
-    // 수식 입력 모달 닫기
-    function closeMathModal() {
-        document.getElementById('mathModal').style.display = 'none';
-        document.getElementById('mathInput').value = '';
-        document.getElementById('mathPreview').innerHTML = '';
-    }
-    
-    // 수식 미리보기
-    function previewMath() {
-        const mathInput = document.getElementById('mathInput').value;
-        const mathPreview = document.getElementById('mathPreview');
         
-        mathPreview.innerHTML = '$$' + mathInput + '$$';
-        
-        // MathJax 렌더링
-        if (typeof MathJax !== 'undefined') {
-            MathJax.typesetPromise([mathPreview]).catch(function (err) {
-                console.log('MathJax 오류:', err);
-            });
+        // 이미지 업로드 함수 - 수정됨
+        function uploadImage(input) {
+            if (input.files && input.files[0]) { // 첫 번째 파일만 사용하도록 수정
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    
+                    // 현재 활성화된 텍스트 영역 가져오기
+                    const textarea = isPreviewMode() ? 
+                        document.getElementById('splitNotepad') : 
+                        document.getElementById('notepad');
+                    
+                    // 포커스 설정하여 원본 텍스트로 전환
+                    textarea.focus();
+                    
+                    // 커서 위치 가져오기
+                    const cursorPos = textarea.selectionStart;
+                    
+                    // 이미지 태그 생성
+                    const imgTag = `\n<img src="${imageData}" alt="업로드 이미지">\n`;
+                    
+                    // 텍스트 영역에 이미지 태그 삽입
+                    textarea.value = 
+                        textarea.value.substring(0, cursorPos) + 
+                        imgTag + 
+                        textarea.value.substring(cursorPos);
+                    
+                    // 원본 텍스트 업데이트
+                    textarea.dataset.originalText = textarea.value;
+                    
+                    // 커서 위치 업데이트
+                    textarea.selectionStart = cursorPos + imgTag.length;
+                    textarea.selectionEnd = cursorPos + imgTag.length;
+                    
+                    // 미리보기 업데이트
+                    if (isPreviewMode()) {
+                        updatePreview();
+                    }
+                    
+                    // 자동 저장
+                    autoSave();
+                    
+                    // 단어 수 업데이트
+                    updateWordCount();
+                    
+                    // 이미지 태그 접기 적용
+                    setTimeout(() => {
+                        foldImageTags(textarea);
+                    }, 100);
+                };
+                
+                reader.readAsDataURL(input.files[0]); // 첫 번째 파일만 읽도록 수정
+                
+                // 파일 입력 필드 초기화 (같은 파일을 다시 선택할 수 있도록)
+                input.value = '';
+            }
         }
-    }
-    
-    // 수식 템플릿 삽입
-    function insertMathTemplate(template) {
-        document.getElementById('mathInput').value = mathTemplates[template];
-        previewMath();
-    }
-    
-    // 수식 기호 삽입
-    function insertMathSymbol(symbol) {
-        const mathInput = document.getElementById('mathInput');
-        const cursorPos = mathInput.selectionStart;
         
-        mathInput.value = 
-            mathInput.value.substring(0, cursorPos) + 
-            symbol + 
-            mathInput.value.substring(cursorPos);
+        // 수식 입력 모달 열기
+        function openMathModal() {
+            document.getElementById('mathModal').style.display = 'flex';
+            document.getElementById('mathInput').focus();
+        }
+        
+        // 수식 입력 모달 닫기
+        function closeMathModal() {
+            document.getElementById('mathModal').style.display = 'none';
+            document.getElementById('mathInput').value = '';
+            document.getElementById('mathPreview').innerHTML = '';
+        }
+        
+        // 수식 미리보기
+        function previewMath() {
+            const mathInput = document.getElementById('mathInput').value;
+            const mathPreview = document.getElementById('mathPreview');
             
-        mathInput.focus();
-        mathInput.selectionStart = cursorPos + symbol.length;
-        mathInput.selectionEnd = cursorPos + symbol.length;
-        
-        previewMath();
-    }
-    
-    // 수식 삽입
-    function insertMath() {
-        const mathInput = document.getElementById('mathInput').value;
-        if (!mathInput) {
-            alert('수식을 입력하세요.');
-            return;
-        }
-        
-        const textarea = isPreviewMode() ? 
-            document.getElementById('splitNotepad') : 
-            document.getElementById('notepad');
+            mathPreview.innerHTML = '$$' + mathInput + '$$';
             
-        // 포커스를 줘서 원본 텍스트로 전환
-        textarea.focus();
+            // MathJax 렌더링
+            if (typeof MathJax !== 'undefined') {
+                MathJax.typesetPromise([mathPreview]).catch(function (err) {
+                    console.log('MathJax 오류:', err);
+                });
+            }
+        }
         
-        const cursorPos = textarea.selectionStart;
-        const mathText = '$$' + mathInput + '$$';
+        // 수식 템플릿 삽입
+        function insertMathTemplate(template) {
+            document.getElementById('mathInput').value = mathTemplates[template];
+            previewMath();
+        }
         
-        textarea.value = 
-            textarea.value.substring(0, cursorPos) + 
-            mathText + 
-            textarea.value.substring(cursorPos);
+        // 수식 기호 삽입
+        function insertMathSymbol(symbol) {
+            const mathInput = document.getElementById('mathInput');
+            const cursorPos = mathInput.selectionStart;
             
-        // 원본 텍스트 업데이트
-        textarea.dataset.originalText = textarea.value;
-        
-        textarea.focus();
-        textarea.selectionStart = cursorPos + mathText.length;
-        textarea.selectionEnd = cursorPos + mathText.length;
-        
-        // 수식 입력 창 닫기
-        closeMathModal();
-        
-        // 미리보기 모드인 경우 미리보기 업데이트
-        if (isPreviewMode()) {
-            updatePreview();
+            mathInput.value = 
+                mathInput.value.substring(0, cursorPos) + 
+                symbol + 
+                mathInput.value.substring(cursorPos);
+                
+            mathInput.focus();
+            mathInput.selectionStart = cursorPos + symbol.length;
+            mathInput.selectionEnd = cursorPos + symbol.length;
+            
+            previewMath();
         }
         
-        // 자동 저장 및 단어 수 업데이트
-        autoSave();
-        updateWordCount();
-        
-        // 다시 이미지 태그 접기 적용
-        setTimeout(() => {
-            foldImageTags(textarea);
-        }, 100);
-    }
-    
-    // PDF 직접 내보내기 함수 (미리보기 없이) - 고화질 버전
-    function exportToPDFDirectly() {
-        // 미리보기 모드가 아니면 전환
-        if (!isPreviewMode()) {
-            togglePreview();
+        // 수식 삽입
+        function insertMath() {
+            const mathInput = document.getElementById('mathInput').value;
+            if (!mathInput) {
+                alert('수식을 입력하세요.');
+                return;
+            }
+            
+            const textarea = isPreviewMode() ? 
+                document.getElementById('splitNotepad') : 
+                document.getElementById('notepad');
+                
+            // 포커스를 줘서 원본 텍스트로 전환
+            textarea.focus();
+            
+            const cursorPos = textarea.selectionStart;
+            const mathText = '$$' + mathInput + '$$';
+            
+            textarea.value = 
+                textarea.value.substring(0, cursorPos) + 
+                mathText + 
+                textarea.value.substring(cursorPos);
+                
+            // 원본 텍스트 업데이트
+            textarea.dataset.originalText = textarea.value;
+            
+            textarea.focus();
+            textarea.selectionStart = cursorPos + mathText.length;
+            textarea.selectionEnd = cursorPos + mathText.length;
+            
+            // 수식 입력 창 닫기
+            closeMathModal();
+            
+            // 미리보기 모드인 경우 미리보기 업데이트
+            if (isPreviewMode()) {
+                updatePreview();
+            }
+            
+            // 자동 저장 및 단어 수 업데이트
+            autoSave();
+            updateWordCount();
+            
+            // 다시 이미지 태그 접기 적용
+            setTimeout(() => {
+                foldImageTags(textarea);
+            }, 100);
         }
         
-        // 로딩 표시
-        showLoading('PDF 생성 중...');
+        // PDF 직접 내보내기 함수 (미리보기 없이) - 고화질 버전, 흰색 배경 추가
+        function exportToPDFDirectly() {
+            // 미리보기 모드가 아니면 전환
+            if (!isPreviewMode()) {
+                togglePreview();
+            }
+            
+            // 로딩 표시
+            showLoading('PDF 생성 중...');
+            
+            // 미리보기 내용 가져오기
+            const previewPane = document.getElementById('previewPane');
+            
+            // MathJax 렌더링 완료 확인
+            setTimeout(() => {
+                // HTML2Canvas를 사용하여 미리보기 영역을 이미지로 캡처 (고화질 설정)
+                html2canvas(previewPane, {
+                    scale: 3, // 고해상도 (3배 스케일)
+                    useCORS: true, // 외부 이미지 허용
+                    logging: false, // 로그 비활성화
+                    imageTimeout: 15000, // 이미지 로딩 타임아웃 증가
+                    allowTaint: true, // 크로스 도메인 이미지 허용
+                    backgroundColor: "#FFFFFF" // 흰색 배경 추가
+                }).then(canvas => {
+                    const { jsPDF } = window.jspdf;
+                    const imgData = canvas.toDataURL('image/jpeg', 1.0); // 최대 품질
+                    
+                    // PDF 생성 시 px 단위 및 핫픽스 적용
+                    const pdf = new jsPDF({
+                        orientation: 'p',
+                        unit: 'px',
+                        format: 'a4',
+                        hotfixes: ['px_scaling']
+                    });
+                    
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+                    const imgY = 0;
+                    
+                    // 흰색 배경 추가
+                    pdf.setFillColor(255, 255, 255);
+                    pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+                    
+                    pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+                    
+                    // 파일 이름 입력 받기
+                    const filename = prompt('PDF 파일 이름을 입력하세요:', 'memo.pdf');
+                    if (filename) {
+                        pdf.save(filename);
+                    }
+                    
+                    // 로딩 숨기기
+                    hideLoading();
+                }).catch(err => {
+                    console.error('PDF 생성 오류:', err);
+                    alert('PDF 생성 중 오류가 발생했습니다.');
+                    hideLoading();
+                });
+            }, 500); // MathJax 렌더링을 위한 지연
+        }
         
-        // 미리보기 내용 가져오기
-        const previewPane = document.getElementById('previewPane');
-        
-        // MathJax 렌더링 완료 확인
-        setTimeout(() => {
-            // HTML2Canvas를 사용하여 미리보기 영역을 이미지로 캡처 (고화질 설정)
-            html2canvas(previewPane, {
+        // PDF 내보내기 함수 (미리보기에서) - 고화질 버전, 흰색 배경 추가
+        function exportToPDF() {
+            // 로딩 표시
+            showLoading('PDF 생성 중...');
+            
+            const pdfContent = document.getElementById('pdf-content');
+            
+            // HTML2Canvas를 사용하여 PDF 미리보기 영역을 이미지로 캡처 (고화질 설정)
+            html2canvas(pdfContent, {
                 scale: 3, // 고해상도 (3배 스케일)
                 useCORS: true, // 외부 이미지 허용
                 logging: false, // 로그 비활성화
                 imageTimeout: 15000, // 이미지 로딩 타임아웃 증가
-                allowTaint: true // 크로스 도메인 이미지 허용
+                allowTaint: true, // 크로스 도메인 이미지 허용
+                backgroundColor: "#FFFFFF" // 흰색 배경 추가
             }).then(canvas => {
                 const { jsPDF } = window.jspdf;
                 const imgData = canvas.toDataURL('image/jpeg', 1.0); // 최대 품질
@@ -652,6 +1259,10 @@
                 const imgX = (pdfWidth - imgWidth * ratio) / 2;
                 const imgY = 0;
                 
+                // 흰색 배경 추가
+                pdf.setFillColor(255, 255, 255);
+                pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+                
                 pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
                 
                 // 파일 이름 입력 받기
@@ -667,102 +1278,48 @@
                 alert('PDF 생성 중 오류가 발생했습니다.');
                 hideLoading();
             });
-        }, 500); // MathJax 렌더링을 위한 지연
-    }
-    
-    // PDF 내보내기 함수 (미리보기에서) - 고화질 버전
-    function exportToPDF() {
-        // 로딩 표시
-        showLoading('PDF 생성 중...');
-        
-        const pdfContent = document.getElementById('pdf-content');
-        
-        // HTML2Canvas를 사용하여 PDF 미리보기 영역을 이미지로 캡처 (고화질 설정)
-        html2canvas(pdfContent, {
-            scale: 3, // 고해상도 (3배 스케일)
-            useCORS: true, // 외부 이미지 허용
-            logging: false, // 로그 비활성화
-            imageTimeout: 15000, // 이미지 로딩 타임아웃 증가
-            allowTaint: true // 크로스 도메인 이미지 허용
-        }).then(canvas => {
-            const { jsPDF } = window.jspdf;
-            const imgData = canvas.toDataURL('image/jpeg', 1.0); // 최대 품질
-            
-            // PDF 생성 시 px 단위 및 핫픽스 적용
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'px',
-                format: 'a4',
-                hotfixes: ['px_scaling']
-            });
-            
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-            const imgX = (pdfWidth - imgWidth * ratio) / 2;
-            const imgY = 0;
-            
-            pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-            
-            // 파일 이름 입력 받기
-            const filename = prompt('PDF 파일 이름을 입력하세요:', 'memo.pdf');
-            if (filename) {
-                pdf.save(filename);
-            }
-            
-            // 로딩 숨기기
-            hideLoading();
-        }).catch(err => {
-            console.error('PDF 생성 오류:', err);
-            alert('PDF 생성 중 오류가 발생했습니다.');
-            hideLoading();
-        });
-    }
-    
-    // PDF 미리보기 닫기
-    function closePDFPreview() {
-        document.getElementById('pdf-preview-container').style.display = 'none';
-    }
-    
-    // 로딩 표시
-    function showLoading(message) {
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.className = 'loading-overlay';
-        loadingOverlay.id = 'loadingOverlay';
-        
-        const loadingMessage = document.createElement('div');
-        loadingMessage.className = 'loading-message';
-        loadingMessage.textContent = message || '로딩 중...';
-        
-        loadingOverlay.appendChild(loadingMessage);
-        document.body.appendChild(loadingOverlay);
-    }
-    
-    // 로딩 숨기기
-    function hideLoading() {
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        if (loadingOverlay) {
-            document.body.removeChild(loadingOverlay);
         }
-    }
-    
-    // HTML 태그를 제외한 글자수 계산
-    function updateWordCount() {
-        const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
-        // 원본 텍스트 사용
-        const text = textarea.dataset.originalText || textarea.value;
         
-        // HTML 태그를 제외한 순수 텍스트 추출
-        const plainText = text.replace(/<[^>]*>/g, '');
+        // PDF 미리보기 닫기
+        function closePDFPreview() {
+            document.getElementById('pdf-preview-container').style.display = 'none';
+        }
         
-        const wordCount = plainText.trim() === '' ? 0 : plainText.trim().split(/\s+/).length;
-        const lineCount = text === '' ? 0 : text.split('\n').length;
-        document.getElementById('wordCount').textContent =
-            `글자 수: ${plainText.length} | 단어 수: ${wordCount} | 줄 수: ${lineCount}`;
-    }
-    
+        // 로딩 표시
+        function showLoading(message) {
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'loading-overlay';
+            loadingOverlay.id = 'loadingOverlay';
+            
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'loading-message';
+            loadingMessage.textContent = message || '로딩 중...';
+            
+            loadingOverlay.appendChild(loadingMessage);
+            document.body.appendChild(loadingOverlay);
+        }
+        
+        // 로딩 숨기기
+        function hideLoading() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                document.body.removeChild(loadingOverlay);
+            }
+        }
+        
+        // HTML 태그를 제외한 글자수 계산
+        function updateWordCount() {
+            const textarea = isPreviewMode() ? document.getElementById('splitNotepad') : document.getElementById('notepad');
+            // 원본 텍스트 사용
+            const text = textarea.dataset.originalText || textarea.value;
+            
+            // HTML 태그를 제외한 순수 텍스트 추출
+            const plainText = text.replace(/<[^>]*>/g, '');
+            
+            const wordCount = plainText.trim() === '' ? 0 : plainText.trim().split(/\s+/).length;
+            const lineCount = text === '' ? 0 : text.split('\n').length;
+            document.getElementById('wordCount').textContent =
+                `글자 수: ${plainText.length} | 단어 수: ${wordCount} | 줄 수: ${lineCount}`;
     function createNewNote() {
         const noteTitle = prompt('새 메모의 제목을 입력하세요:');
         if (!noteTitle) return;
@@ -794,8 +1351,22 @@
             const note = notes[noteId];
             const noteItem = document.createElement('div');
             noteItem.className = 'note-item';
-            noteItem.textContent = note.title || `메모 ${noteId.substring(5)}`;
-            noteItem.onclick = function() { loadSpecificNote(noteId); };
+            
+            // 메모 제목과 삭제 버튼을 포함하는 구조
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = note.title || `메모 ${noteId.substring(5)}`;
+            noteItem.appendChild(titleSpan);
+            
+            // 삭제 버튼 추가
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '삭제';
+            deleteBtn.onclick = function(e) { deleteNote(noteId, e); };
+            noteItem.appendChild(deleteBtn);
+            
+            // 메모 항목 클릭 시 해당 메모 로드
+            titleSpan.onclick = function() { loadSpecificNote(noteId); };
+            
             if (noteId === currentNoteId) noteItem.style.fontWeight = 'bold';
             noteList.appendChild(noteItem);
         }
@@ -833,10 +1404,10 @@
         if (index !== -1) {
             // 포커스를 줘서 원본 텍스트로 전환
             textarea.focus();
-            textarea.setSelectionRange(index, index + searchsearchTerm.length);
-        }
-        else alert('검색 결과가 없습니다.');
+            textarea.setSelectionRange(index, index + searchTerm.length);
+        } else alert('검색 결과가 없습니다.');
     }
+    
     function clearSearch() {
         document.getElementById('searchInput').value = '';
     }
