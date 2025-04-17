@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>메모장</title>
+    <style>
+        /* 기본 스타일 */
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 40px; 
+            transition: all 0.3s ease;
+        }
+        h2 {
+            padding-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        textarea { 
+            width: 100%; 
+            height: 400px; 
+            font-size: 16px; 
+            padding: 15px; 
+            box-sizing: border-box;
+            border-radius: 5px;
+            line-height: 1.5;
+            transition: all 0.3s ease;
+        }
+        textarea:focus {
+            outline: none;
+        }
+        button { 
+            margin: 5px; 
+            padding: 8px 15px; 
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            filter: brightness(1.2);
+        }
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 15px;
+        }
+        .toolbar {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+        .toolbar button {
+            margin: 2px;
+            padding: 5px 10px;
+        }
+        .color-picker {
+            height: 30px;
+            width: 30px;
+            padding: 0;
+            border-radius: 5px;
+            background-color: transparent;
+            cursor: pointer;
+        }
+        .font-size {
+            border-radius: 5px;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+        .separator {
+            width: 1px;
+            height: 30px;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        .active {
+            filter: brightness(1.2);
+        }
+        .theme-selector {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .theme-btn {
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        /* 기본 테마 (뮤티드 옐로우) */
+        body.theme-default { 
+            background: #222222; 
+            color: #E0D268;
+        }
+        body.theme-default h2 {
+            color: #E0D268;
+            border-bottom: 2px solid #E0D268;
+        }
+        body.theme-default textarea { 
+            background-color: #333333; 
+            color: #E0D268; 
+            border: 2px solid #E0D268;
+        }
+        body.theme-default textarea:focus {
+            box-shadow: 0 0 5px #E0D268;
+        }
+        body.theme-default button { 
+            background-color: #333333; 
+            color: #E0D268; 
+            border: 2px solid #E0D268; 
+        }
+        body.theme-default button:hover {
+            background-color: #E0D268;
+            color: #222222;
+        }
+        body.theme-default .toolbar {
+            background-color: #333333;
+            border: 2px solid #E0D268;
+        }
+        body.theme-default .color-picker {
+            border: 2px solid #E0D268;
+        }
+        body.theme-default .font-size {
+            background-color: #333333;
+            color: #E0D268;
+            border: 2px solid #E0D268;
+        }
+        body.theme-default .separator {
+            background-color: #E0D268;
+        }
+        body.theme-default .active {
+            background-color: #E0D268;
+            color: #222222;
+        }
+        
+        /* 미드나이트 블루 테마 */
+        body.theme-midnight { 
+            background: #121212; 
+            color: #A8DADC;
+        }
+        body.theme-midnight h2 {
+            color: #A8DADC;
+            border-bottom: 2px solid #004D61;
+        }
+        body.theme-midnight textarea { 
+            background-color: #1A1A1A; 
+            color: #A8DADC; 
+            border: 2px solid #004D61;
+        }
+        body.theme-midnight textarea:focus {
+            box-shadow: 0 0 5px #004D61;
+        }
+        body.theme-midnight button { 
+            background-color: #1A1A1A; 
+            color: #A8DADC; 
+            border: 2px solid #004D61; 
+        }
+        body.theme-midnight button:hover {
+            background-color: #004D61;
+            color: #A8DADC;
+        }
+        body.theme-midnight .toolbar {
+            background-color: #1A1A1A;
+            border: 2px solid #004D61;
+        }
+        body.theme-midnight .color-picker {
+            border: 2px solid #004D61;
+        }
+        body.theme-midnight .font-size {
+            background-color: #1A1A1A;
+            color: #A8DADC;
+            border: 2px solid #004D61;
+        }
+        body.theme-midnight .separator {
+            background-color: #004D61;
+        }
+        body.theme-midnight .active {
+            background-color: #004D61;
+            color: #A8DADC;
+        }
+        
+        /* 딥 포레스트 테마 */
+        body.theme-forest { 
+            background: #1A1A1A; 
+            color: #E4E4E4;
+        }
+        body.theme-forest h2 {
+            color: #E4E4E4;
+            border-bottom: 2px solid #3E5641;
+        }
+        body.theme-forest textarea { 
+            background-color: #222222; 
+            color: #E4E4E4; 
+            border: 2px solid #3E5641;
+        }
+        body.theme-forest textarea:focus {
+            box-shadow: 0 0 5px #3E5641;
+        }
+        body.theme-forest button { 
+            background-color: #222222; 
+            color: #E4E4E4; 
+            border: 2px solid #3E5641; 
+        }
+        body.theme-forest button:hover {
+            background-color: #3E5641;
+            color: #E4E4E4;
+        }
+        body.theme-forest .toolbar {
+            background-color: #222222;
+            border: 2px solid #3E5641;
+        }
+        body.theme-forest .color-picker {
+            border: 2px solid #3E5641;
+        }
+        body.theme-forest .font-size {
+            background-color: #222222;
+            color: #E4E4E4;
+            border: 2px solid #3E5641;
+        }
+        body.theme-forest .separator {
+            background-color: #3E5641;
+        }
+        body.theme-forest .active {
+            background-color: #3E5641;
+            color: #E4E4E4;
+        }
+        
+        /* 트와일라잇 테마 */
+        body.theme-twilight { 
+            background: #2C2C2C; 
+            color: #B39CD0;
+        }
+        body.theme-twilight h2 {
+            color: #B39CD0;
+            border-bottom: 2px solid #FFC1CC;
+        }
+        body.theme-twilight textarea { 
+            background-color: #333333; 
+            color: #B39CD0; 
+            border: 2px solid #FFC1CC;
+        }
+        body.theme-twilight textarea:focus {
+            box-shadow: 0 0 5px #FFC1CC;
+        }
+        body.theme-twilight button { 
+            background-color: #333333; 
+            color: #B39CD0; 
+            border: 2px solid #FFC1CC; 
+        }
+        body.theme-twilight button:hover {
+            background-color: #FFC1CC;
+            color: #2C2C2C;
+        }
+        body.theme-twilight .toolbar {
+            background-color: #333333;
+            border: 2px solid #FFC1CC;
+        }
+        body.theme-twilight .color-picker {
+            border: 2px solid #FFC1CC;
+        }
+        body.theme-twilight .font-size {
+            background-color: #333333;
+            color: #B39CD0;
+            border: 2px solid #FFC1CC;
+        }
+        body.theme-twilight .separator {
+            background-color: #FFC1CC;
+        }
+        body.theme-twilight .active {
+            background-color: #FFC1CC;
+            color: #2C2C2C;
+        }
+        
+        /* 웜 톤 테마 */
+        body.theme-warm { 
+            background: #1C1C1C; 
+            color: #F5E8D8;
+        }
+        body.theme-warm h2 {
+            color: #F5E8D8;
+            border-bottom: 2px solid #DAA520;
+        }
+        body.theme-warm textarea { 
+            background-color: #2A2A2A; 
+            color: #F5E8D8; 
+            border: 2px solid #DAA520;
+        }
+        body.theme-warm textarea:focus {
+            box-shadow: 0 0 5px #DAA520;
+        }
+        body.theme-warm button { 
+            background-color: #2A2A2A; 
+            color: #F5E8D8; 
+            border: 2px solid #DAA520; 
+        }
+        body.theme-warm button:hover {
+            background-color: #DAA520;
+            color: #1C1C1C;
+        }
+        body.theme-warm .toolbar {
+            background-color: #2A2A2A;
+            border: 2px solid #DAA520;
+        }
+        body.theme-warm .color-picker {
+            border: 2px solid #DAA520;
+        }
+        body.theme-warm .font-size {
+            background-color: #2A2A2A;
+            color: #F5E8D8;
+            border: 2px solid #DAA520;
+        }
+        body.theme-warm .separator {
+            background-color: #DAA520;
+        }
+        body.theme-warm .active {
+            background-color: #DAA520;
+            color: #1C1C1C;
+        }
+        
+        /* 에메랄드 오디세이 테마 */
+        body.theme-emerald { 
+            background: #222222; 
+            color: #A9DFBF;
+        }
+        body.theme-emerald h2 {
+            color: #A9DFBF;
+            border-bottom: 2px solid #4A5E3D;
+        }
+        body.theme-emerald textarea { 
+            background-color: #2E2E2E; 
+            color: #A9DFBF; 
+            border: 2px solid #4A5E3D;
+        }
+        body.theme-emerald textarea:focus {
+            box-shadow: 0 0 5px #4A5E3D;
+        }
+        body.theme-emerald button { 
+            background-color: #2E2E2E; 
+            color: #A9DFBF; 
+            border: 2px solid #4A5E3D; 
+        }
+        body.theme-emerald button:hover {
+            background-color: #4A5E3D;
+            color: #A9DFBF;
+        }
+        body.theme-emerald .toolbar {
+            background-color: #2E2E2E;
+            border: 2px solid #4A5E3D;
+        }
+        body.theme-emerald .color-picker {
+            border: 2px solid #4A5E3D;
+        }
+        body.theme-emerald .font-size {
+            background-color: #2E2E2E;
+            color: #A9DFBF;
+            border: 2px solid #4A5E3D;
+        }
+        body.theme-emerald .separator {
+            background-color: #4A5E3D;
+        }
+        body.theme-emerald .active {
+            background-color: #4A5E3D;
+            color: #A9DFBF;
+        }
+    </style>
+</head>
+<body class="theme-default">
+    <h2>메모장</h2>
+    
+    <div class="theme-selector">
+        <button class="theme-btn" onclick="changeTheme('default')">기본 테마</button>
+        <button class="theme-btn" onclick="changeTheme('midnight')">미드나이트 블루</button>
+        <button class="theme-btn" onclick="changeTheme('forest')">딥 포레스트</button>
+        <button class="theme-btn" onclick="changeTheme('twilight')">트와일라잇</button>
+        <button class="theme-btn" onclick="changeTheme('warm')">웜 톤</button>
+        <button class="theme-btn" onclick="changeTheme('emerald')">에메랄드</button>
+    </div>
+    
+    <div class="toolbar">
+        <button id="bold" onclick="formatText('bold')" title="굵게"><b>B</b></button>
+        <button id="italic" onclick="formatText('italic')" title="기울임"><i>I</i></button>
+        <button id="underline" onclick="formatText('underline')" title="밑줄"><u>U</u></button>
+        <button id="strikethrough" onclick="formatText('strikethrough')" title="취소선"><s>S</s></button>
+        
+        <div class="separator"></div>
+        
+        <button onclick="formatText('heading1')" title="제목 1">H1</button>
+        <button onclick="formatText('heading2')" title="제목 2">H2</button>
+        <button onclick="formatText('heading3')" title="제목 3">H3</button>
+        
+        <div class="separator"></div>
+        
+        <button onclick="formatText('list')" title="목록">-  목록</button>
+        <button onclick="formatText('numberedList')" title="번호 목록">1. 번호</button>
+        
+        <div class="separator"></div>
+        
+        <select class="font-size" onchange="changeFont(this.value)" title="글꼴 크기">
+            <option value="">글꼴 크기</option>
+            <option value="small">작게</option>
+            <option value="medium">보통</option>
+            <option value="large">크게</option>
+            <option value="x-large">매우 크게</option>
+        </select>
+        
+        <div class="separator"></div>
+        
+        <input type="color" value="#E0D268" class="color-picker" onchange="changeColor(this.value)" title="글자 색상">
+        <button onclick="resetColor()" title="기본 색상으로 복원">기본색</button>
+    </div>
+    
+    <textarea id="notepad" placeholder="여기에 메모를 입력하세요..."></textarea><br>
+    
+    <div class="button-container">
+        <button onclick="saveNote()">저장</button>
+        <button onclick="loadNote()">불러오기</button>
+        <button onclick="clearNote()">지우기</button>
+        <button onclick="downloadNote()">다운로드</button>
+        <button onclick="copyToClipboard()">클립보드에 복사</button>
+    </div>
+    
+    <script>
+        // 테마 변경 함수
+        function changeTheme(theme) {
+            document.body.className = '';
+            document.body.classList.add('theme-' + theme);
+            localStorage.setItem('theme', theme);
+        }
+        
+        function saveNote() {
+            localStorage.setItem('note', document.getElementById('notepad').value);
+            alert('메모가 저장되었습니다!');
+        }
+        
+        function loadNote() {
+            var note = localStorage.getItem('note');
+            if (note !== null) {
+                document.getElementById('notepad').value = note;
+                alert('메모를 불러왔습니다!');
+            } else {
+                alert('저장된 메모가 없습니다.');
+            }
+        }
+        
+        function clearNote() {
+            if(confirm('정말로 메모를 지우시겠습니까?')) {
+                document.getElementById('notepad').value = '';
+            }
+        }
+        
+        function downloadNote() {
+            const text = document.getElementById('notepad').value;
+            if (!text) {
+                alert('다운로드할 내용이 없습니다.');
+                return;
+            }
+            
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            const filename = prompt('파일 이름을 입력하세요:', 'memo.txt');
+            if (!filename) return; // 취소 시 중단
+            
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function copyToClipboard() {
+            const textarea = document.getElementById('notepad');
+            textarea.select();
+            document.execCommand('copy');
+            alert('클립보드에 복사되었습니다!');
+        }
+        
+        function formatText(format) {
+            const textarea = document.getElementById('notepad');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            let formattedText = '';
+            
+            switch(format) {
+                case 'bold':
+                    formattedText = `**${selectedText}**`;
+                    break;
+                case 'italic':
+                    formattedText = `*${selectedText}*`;
+                    break;
+                case 'underline':
+                    formattedText = `_${selectedText}_`;
+                    break;
+                case 'strikethrough':
+                    formattedText = `~~${selectedText}~~`;
+                    break;
+                case 'heading1':
+                    formattedText = `\n# ${selectedText}\n`;
+                    break;
+                case 'heading2':
+                    formattedText = `\n## ${selectedText}\n`;
+                    break;
+                case 'heading3':
+                    formattedText = `\n### ${selectedText}\n`;
+                    break;
+                case 'list':
+                    formattedText = selectedText.split('\n').map(line => `-  ${line}`).join('\n');
+                    break;
+                case 'numberedList':
+                    formattedText = selectedText.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n');
+                    break;
+            }
+            
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.focus();
+            textarea.selectionStart = start;
+            textarea.selectionEnd = start + formattedText.length;
+            
+            // 버튼 활성화 상태 토글
+            toggleButtonState(format);
+        }
+        
+        function toggleButtonState(format) {
+            const button = document.getElementById(format);
+            if (button) {
+                button.classList.toggle('active');
+                setTimeout(() => {
+                    button.classList.remove('active');
+                }, 300);
+            }
+        }
+        
+        function changeFont(size) {
+            const textarea = document.getElementById('notepad');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (!selectedText) {
+                alert('글꼴 크기를 변경할 텍스트를 먼저 선택하세요.');
+                return;
+            }
+            
+            let sizeTag = '';
+            switch(size) {
+                case 'small':
+                    sizeTag = '<small>';
+                    break;
+                case 'medium':
+                    sizeTag = '<medium>';
+                    break;
+                case 'large':
+                    sizeTag = '<large>';
+                    break;
+                case 'x-large':
+                    sizeTag = '<x-large>';
+                    break;
+                default:
+                    return;
+            }
+            
+            const formattedText = `${sizeTag}${selectedText}</${size}>`;
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.focus();
+        }
+        
+        function changeColor(color) {
+            const textarea = document.getElementById('notepad');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (!selectedText) {
+                alert('색상을 변경할 텍스트를 먼저 선택하세요.');
+                return;
+            }
+            
+            const formattedText = `<color=${color}>${selectedText}</color>`;
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.focus();
+        }
+        
+        function resetColor() {
+            const textarea = document.getElementById('notepad');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (!selectedText) {
+                alert('색상을 초기화할 텍스트를 먼저 선택하세요.');
+                return;
+            }
+            
+            // 색상 태그 제거
+            const regex = /<color=[^>]+>(.+?)<\/color>/g;
+            const formattedText = selectedText.replace(regex, '$1');
+            
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.focus();
+        }
+        
+        // 페이지 로드 시 저장된 메모와 테마 불러오기
+        window.onload = function() {
+            var note = localStorage.getItem('note');
+            if (note !== null) {
+                document.getElementById('notepad').value = note;
+            }
+            
+            var theme = localStorage.getItem('theme');
+            if (theme !== null) {
+                changeTheme(theme);
+            }
+            
+            // 단축키 설정
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey) {
+                    switch(e.key) {
+                        case 'b': // Ctrl+B: 굵게
+                            e.preventDefault();
+                            formatText('bold');
+                            break;
+                        case 'i': // Ctrl+I: 기울임
+                            e.preventDefault();
+                            formatText('italic');
+                            break;
+                        case 'u': // Ctrl+U: 밑줄
+                            e.preventDefault();
+                            formatText('underline');
+                            break;
+                        case 's': // Ctrl+S: 저장
+                            e.preventDefault();
+                            saveNote();
+                            break;
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
