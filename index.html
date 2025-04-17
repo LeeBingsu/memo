@@ -1501,165 +1501,141 @@
     .output-error { color: #f44747; }
 </style>
 
-<!-- 코딩 모드 UI -->
-<div class="coding-mode">
-    <div class="code-container">
-        <div id="pythonEditor"></div>
-        <div id="codeOutput"></div>
-    </div>
-    <div class="button-container" style="margin-top: 10px;">
-        <button onclick="executePython()">실행</button>
-        <button onclick="clearCodeOutput()">출력 초기화</button>
-    </div>
+<!-- 코딩모드 토글 버튼(툴바 등 원하는 위치에 추가) -->
+<button onclick="toggleCodingModeSection()">코딩 모드</button>
+
+<!-- OnlineGDB 스타일 코딩모드 섹션 -->
+<div id="coding-mode-section" style="display:none;">
+  <div class="toolbar" style="background:#23241f;">
+    <button id="runBtn">Run (F9)</button>
+    <button id="saveBtn">Save .py (Ctrl+S)</button>
+    <label for="loadFile" style="margin-bottom:0; color:#fff; cursor:pointer;">Load .py</label>
+    <input type="file" id="loadFile" accept=".py" style="display:none;">
+    <span style="margin-left:auto; color:#888;">OnlineGDB Style Python IDE</span>
+  </div>
+  <div id="editor"></div>
+  <div style="background:#23241f; padding:8px 12px;">
+    <div style="color:#aaa;font-size:13px;">STDIN (input()):</div>
+    <textarea id="stdin" rows="2" placeholder="여기에 input() 값을 줄 단위로 입력하세요." style="width:100%;background:#333;color:#fff;border:none;padding:6px;border-radius:3px;"></textarea>
+  </div>
+  <div style="background:#1e1e1e; border-top:2px solid #444;">
+    <div id="output" style="height:180px;width:100%;background:#1e1e1e;color:#f8f8f2;font-family:'Courier New',monospace;font-size:15px;padding:10px;overflow-y:auto;white-space:pre-wrap;"></div>
+  </div>
 </div>
 
-<!-- 툴바에 코딩 모드 버튼 추가 -->
-<button onclick="toggleCodingMode()">코딩 모드</button>
-
-<!-- 필요한 라이브러리 추가 -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/dracula.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script>
+<!-- CodeMirror/pyodide 라이브러리 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
 
 <script>
-    // 코딩 모드 관련 변수
-    let codeEditor;
-    let pyodide;
-    let inputHistory = [];
-    let historyIndex = -1;
+let editor, pyodideReady = false, pyodide;
 
-    // Pyodide 초기화
-    async function initializePyodide() {
-        pyodide = await loadPyodide({
-            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
-        });
-        pyodide.runPython(`
-            import sys
-            from js import document
-            
-            class OutputCatcher:
-                def __init__(self, output_type):
-                    self.output_type = output_type
-                
-                def write(self, text):
-                    output = document.getElementById('codeOutput')
-                    line = document.createElement('div')
-                    line.className = 'output-line ' + ('output-success' if self.output_type == 'stdout' else 'output-error')
-                    line.textContent = text
-                    output.appendChild(line)
-                    output.scrollTop = output.scrollHeight
-                
-                def flush(self):
-                    pass
+// 코딩모드 토글 (메모장과 전환)
+function toggleCodingModeSection() {
+  const section = document.getElementById('coding-mode-section');
+  const editContainer = document.getElementById('editContainer');
+  if (section.style.display === 'none') {
+    section.style.display = 'block';
+    if (editContainer) editContainer.style.display = 'none';
+    if (!editor) initializeEditor();
+  } else {
+    section.style.display = 'none';
+    if (editContainer) editContainer.style.display = 'block';
+  }
+}
 
-            sys.stdout = OutputCatcher('stdout')
-            sys.stderr = OutputCatcher('stderr')
-        `);
+// 에디터 초기화
+function initializeEditor() {
+  editor = CodeMirror(document.getElementById('editor'), {
+    mode: {name: "python", version: 3},
+    theme: "monokai",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    autofocus: true,
+    autoCloseBrackets: true,
+    matchBrackets: true,
+    extraKeys: {
+      "F9": runCode,
+      "Ctrl-S": saveCode,
+      "Cmd-S": saveCode
     }
+  });
+  editor.setValue(`# OnlineGDB 스타일 Python3 예제\nprint("Hello, OnlineGDB!")\nname = input("이름을 입력하세요: ")\nprint("안녕하세요,", name)`);
+  loadPyodideAndSetup();
+}
 
-    // 코드 에디터 초기화
-    function initializeCodeEditor() {
-        codeEditor = CodeMirror(document.getElementById('pythonEditor'), {
-            mode: {name: "python", version: 3},
-            theme: "dracula",
-            lineNumbers: true,
-            indentUnit: 4,
-            tabSize: 4,
-            extraKeys: {
-                "Enter": handleEnter,
-                "Up": navigateHistoryUp,
-                "Down": navigateHistoryDown
-            },
-            gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
-        });
-    }
+// pyodide 로딩
+async function loadPyodideAndSetup() {
+  if (pyodideReady) return;
+  pyodide = await loadPyodide();
+  pyodideReady = true;
+}
 
-    // 엔터 키 핸들러
-    function handleEnter(cm) {
-        const cursor = cm.getCursor();
-        const line = cm.getLine(cursor.line);
-        
-        if (line.trim().endsWith(':')) {
-            CodeMirror.commands.newlineAndIndent(cm);
-        } else {
-            executePython();
-        }
-    }
+// 코드 실행
+async function runCode() {
+  if (!pyodideReady) { alert("파이썬 엔진 로딩 중... 잠시만 기다려주세요."); return; }
+  const code = editor.getValue();
+  const stdin = document.getElementById('stdin').value.split('\n');
+  let stdinIndex = 0;
+  let output = '';
+  pyodide.setStdin({
+    readline: () => (stdinIndex < stdin.length ? stdin[stdinIndex++] : '')
+  });
+  pyodide.setStdout({
+    batched: (s) => { output += `<span style="color:#a6e22e;">${s}</span>`; }
+  });
+  pyodide.setStderr({
+    batched: (s) => { output += `<span style="color:#fd5ff1;">${s}</span>`; }
+  });
+  document.getElementById('output').innerHTML = '';
+  try {
+    await pyodide.runPythonAsync(code);
+    document.getElementById('output').innerHTML = output;
+  } catch (err) {
+    document.getElementById('output').innerHTML = output + `<span style="color:#fd5ff1;">${err}</span>`;
+  }
+}
 
-    // 코드 실행 함수
-    async function executePython() {
-        const code = codeEditor.getValue();
-        const outputDiv = document.getElementById('codeOutput');
-        
-        // 입력 기록 저장
-        inputHistory.push(code);
-        historyIndex = inputHistory.length;
+// 코드 저장
+function saveCode() {
+  const code = editor.getValue();
+  const blob = new Blob([code], {type: 'text/x-python'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'main.py';
+  a.click();
+  URL.revokeObjectURL(url);
+  return false;
+}
 
-        // 입력 내용 표시
-        const inputLine = document.createElement('div');
-        inputLine.className = 'input-line';
-        inputLine.textContent = '>>> ' + code;
-        outputDiv.appendChild(inputLine);
+// 코드 불러오기
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('loadFile').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      editor.setValue(ev.target.result);
+    };
+    reader.readAsText(file);
+  };
+  document.getElementById('runBtn').onclick = runCode;
+  document.getElementById('saveBtn').onclick = saveCode;
+});
 
-        try {
-            await pyodide.runPythonAsync(code);
-            codeEditor.setValue('');
-        } catch (err) {
-            const errorLine = document.createElement('div');
-            errorLine.className = 'output-line output-error';
-            errorLine.textContent = err;
-            outputDiv.appendChild(errorLine);
-        }
-        
-        outputDiv.scrollTop = outputDiv.scrollHeight;
-    }
-
-    // 출력 초기화
-    function clearCodeOutput() {
-        document.getElementById('codeOutput').innerHTML = '';
-    }
-
-    // 코딩 모드 토글
-    function toggleCodingMode() {
-        const codingMode = document.querySelector('.coding-mode');
-        const editContainer = document.getElementById('editContainer');
-        
-        if (codingMode.style.display === 'none') {
-            codingMode.style.display = 'block';
-            editContainer.style.display = 'none';
-            if (!codeEditor) initializeCodeEditor();
-            if (!pyodide) initializePyodide();
-        } else {
-            codingMode.style.display = 'none';
-            editContainer.style.display = 'block';
-        }
-    }
-
-    // 히스토리 탐색
-    function navigateHistoryUp(cm) {
-        if (historyIndex > 0) {
-            historyIndex--;
-            cm.setValue(inputHistory[historyIndex]);
-        }
-    }
-
-    function navigateHistoryDown(cm) {
-        if (historyIndex < inputHistory.length - 1) {
-            historyIndex++;
-            cm.setValue(inputHistory[historyIndex]);
-        } else {
-            historyIndex = inputHistory.length;
-            cm.setValue('');
-        }
-    }
-
-    // 초기화
-    window.addEventListener('DOMContentLoaded', () => {
-        initializePyodide();
-    });
+// 단축키 연결
+window.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveCode(); }
+  if (e.key === 'F9') { e.preventDefault(); runCode(); }
+});
 </script>
+
+
 
 
 
