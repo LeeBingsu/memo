@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>웹소설 리더 (Web Novel Reader)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.8);
+        }
+
+        /* 폰트 클래스 */
+        .font-sans-kr { font-family: 'Noto Sans KR', sans-serif; }
+        .font-serif-kr { font-family: 'Noto Serif KR', serif; }
+
+        /* 테마별 스타일 정의 */
+        .theme-white { --bg-color: #ffffff; --text-color: #111827; --sub-text: #6b7280; --accent: #3b82f6; }
+        .theme-sepia { --bg-color: #f6f1e3; --text-color: #4b3621; --sub-text: #8c7b6d; --accent: #8b5cf6; }
+        .theme-dark { --bg-color: #1f2937; --text-color: #d1d5db; --sub-text: #9ca3af; --accent: #60a5fa; }
+        .theme-mint { --bg-color: #e0f2f1; --text-color: #004d40; --sub-text: #4db6ac; --accent: #00897b; }
+        .theme-black { --bg-color: #000000; --text-color: #9ca3af; --sub-text: #4b5563; --accent: #3b82f6; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .viewer-content p {
+            margin-bottom: 1.2em; /* 문단 간격 */
+            min-height: 1em; /* 빈 줄도 높이 유지 */
+            word-break: keep-all; /* 단어 단위 줄바꿈 */
+            text-align: justify; /* 양쪽 정렬 */
+        }
+        
+        /* 설정 패널 애니메이션 */
+        #settings-panel {
+            transition: transform 0.3s ease-in-out;
+        }
+        .panel-hidden {
+            transform: translateY(100%);
+        }
+        .panel-visible {
+            transform: translateY(0);
+        }
+
+        /* 로딩 스피너 */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="theme-sepia h-screen flex flex-col overflow-hidden font-sans-kr selection:bg-blue-200 selection:text-blue-900">
+
+    <!-- 상단 진행률 바 -->
+    <div class="fixed top-0 left-0 w-full h-1 bg-gray-200/20 z-50">
+        <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-150" style="width: 0%"></div>
+    </div>
+
+    <!-- 파일 업로드 화면 (초기 화면) -->
+    <div id="upload-screen" class="flex-1 flex flex-col items-center justify-center p-6 space-y-8 animate-fade-in">
+        <div class="text-center space-y-2">
+            <h1 class="text-4xl font-bold mb-2">웹소설 리더</h1>
+            <p class="opacity-70">TXT 파일을 업로드하여 편안하게 감상하세요</p>
+        </div>
+
+        <div class="w-full max-w-md bg-white/10 backdrop-blur-md border border-current/10 rounded-2xl p-8 text-center shadow-lg hover:shadow-xl transition-all border-dashed border-2 border-gray-400/50">
+            <input type="file" id="file-input" accept=".txt" class="hidden">
+            <label for="file-input" class="cursor-pointer block space-y-4">
+                <div class="mx-auto w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl">
+                    📂
+                </div>
+                <div>
+                    <span class="text-lg font-medium hover:underline">파일 선택하기</span>
+                    <p class="text-sm opacity-60 mt-1">또는 파일을 여기로 드래그하세요</p>
+                </div>
+            </label>
+        </div>
+
+        <!-- 인코딩 설정 (한글 깨짐 방지) -->
+        <div class="flex items-center space-x-2 text-sm opacity-80">
+            <label for="encoding-select">인코딩:</label>
+            <select id="encoding-select" class="bg-transparent border border-current/30 rounded px-2 py-1 outline-none">
+                <option value="utf-8" class="text-black">UTF-8 (기본)</option>
+                <option value="euc-kr" class="text-black">EUC-KR (한글 깨질 때)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 뷰어 화면 (숨김 상태) -->
+    <div id="viewer-screen" class="hidden flex-1 relative h-full">
+        <!-- 상단 헤더 (제목 및 닫기) -->
+        <header class="absolute top-0 w-full p-4 flex justify-between items-center z-40 bg-gradient-to-b from-[var(--bg-color)] to-transparent h-20 transition-opacity duration-300 opacity-0 hover:opacity-100 group">
+            <h2 id="file-title" class="text-lg font-bold truncate max-w-[70%] pl-2">제목 없음</h2>
+            <button onclick="resetApp()" class="p-2 rounded-full hover:bg-black/10 transition-colors" title="파일 닫기">
+                ✕
+            </button>
+        </header>
+
+        <!-- 텍스트 컨텐츠 영역 -->
+        <main id="content-container" class="h-full overflow-y-auto px-4 pb-32 pt-12 md:px-0 scroll-smooth">
+            <div id="content-inner" class="viewer-content max-w-3xl mx-auto text-lg leading-relaxed outline-none min-h-screen" tabindex="0">
+                <!-- 텍스트가 여기에 렌더링 됩니다 -->
+            </div>
+            <div id="scroll-sentinel" class="h-10"></div>
+        </main>
+
+        <!-- 하단 플로팅 메뉴 버튼 -->
+        <div class="absolute bottom-6 right-6 z-40">
+            <button id="settings-toggle" class="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 transition-transform active:scale-95 hover:rotate-90 duration-300">
+                ⚙️
+            </button>
+        </div>
+
+        <!-- 설정 패널 (슬라이드 업) -->
+        <div id="settings-panel" class="absolute bottom-0 left-0 w-full bg-[var(--bg-color)] border-t border-current/10 p-6 z-50 panel-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.1)] rounded-t-2xl">
+            <div class="max-w-3xl mx-auto space-y-6">
+                <!-- 핸들러 (드래그 느낌) -->
+                <div class="w-12 h-1 bg-current/20 rounded-full mx-auto mb-2 cursor-pointer" onclick="toggleSettings()"></div>
+
+                <!-- 테마 선택 -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold opacity-70">배경 테마</label>
+                    <div class="flex space-x-3 overflow-x-auto pb-2 no-scrollbar">
+                        <button onclick="setTheme('theme-white')" class="w-12 h-12 rounded-full border border-gray-300 shadow-sm bg-white flex-shrink-0 focus:ring-2 ring-blue-500" title="화이트"></button>
+                        <button onclick="setTheme('theme-sepia')" class="w-12 h-12 rounded-full border border-gray-300 shadow-sm bg-[#f6f1e3] flex-shrink-0 focus:ring-2 ring-blue-500" title="세피아"></button>
+                        <button onclick="setTheme('theme-mint')" class="w-12 h-12 rounded-full border border-gray-300 shadow-sm bg-[#e0f2f1] flex-shrink-0 focus:ring-2 ring-blue-500" title="민트"></button>
+                        <button onclick="setTheme('theme-dark')" class="w-12 h-12 rounded-full border border-gray-600 shadow-sm bg-[#1f2937] flex-shrink-0 focus:ring-2 ring-blue-500" title="다크"></button>
+                        <button onclick="setTheme('theme-black')" class="w-12 h-12 rounded-full border border-gray-700 shadow-sm bg-[#000000] flex-shrink-0 focus:ring-2 ring-blue-500" title="블랙"></button>
+                    </div>
+                </div>
+
+                <!-- 폰트 및 크기 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold opacity-70">글꼴</label>
+                        <div class="flex bg-current/5 rounded-lg p-1">
+                            <button onclick="setFont('sans')" id="btn-font-sans" class="flex-1 py-2 rounded-md text-sm font-sans-kr transition-colors bg-white/90 text-black shadow-sm">고딕</button>
+                            <button onclick="setFont('serif')" id="btn-font-serif" class="flex-1 py-2 rounded-md text-sm font-serif-kr transition-colors opacity-60 hover:bg-white/50">명조</button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold opacity-70">글자 크기 & 줄 간격</label>
+                        <div class="flex items-center space-x-4">
+                            <button onclick="adjustSize(-1)" class="w-10 h-10 rounded-full bg-current/10 hover:bg-current/20 flex items-center justify-center text-lg">-</button>
+                            <span id="font-size-display" class="font-mono w-12 text-center">18px</span>
+                            <button onclick="adjustSize(1)" class="w-10 h-10 rounded-full bg-current/10 hover:bg-current/20 flex items-center justify-center text-lg">+</button>
+                            
+                            <div class="h-8 w-px bg-current/20 mx-2"></div>
+
+                            <button onclick="adjustLineHeight(-0.1)" class="w-10 h-10 rounded-full bg-current/10 hover:bg-current/20 flex items-center justify-center text-sm" title="줄간격 감소">좁게</button>
+                            <button onclick="adjustLineHeight(0.1)" class="w-10 h-10 rounded-full bg-current/10 hover:bg-current/20 flex items-center justify-center text-sm" title="줄간격 증가">넓게</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 text-center">
+                    <button onclick="toggleSettings()" class="text-sm opacity-50 hover:opacity-100 underline">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로딩 인디케이터 -->
+    <div id="loader-overlay" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center space-y-4">
+            <div class="loader"></div>
+            <p class="text-gray-800 font-medium">파일 읽는 중...</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM 요소
+        const uploadScreen = document.getElementById('upload-screen');
+        const viewerScreen = document.getElementById('viewer-screen');
+        const fileInput = document.getElementById('file-input');
+        const contentContainer = document.getElementById('content-container');
+        const contentInner = document.getElementById('content-inner');
+        const fileTitle = document.getElementById('file-title');
+        const settingsPanel = document.getElementById('settings-panel');
+        const progressBar = document.getElementById('progress-bar');
+        const loaderOverlay = document.getElementById('loader-overlay');
+        
+        // 상태 변수
+        let settings = {
+            theme: 'theme-sepia',
+            fontSize: 20,
+            lineHeight: 1.8,
+            fontFamily: 'sans' // 'sans' or 'serif'
+        };
+        let currentFile = null;
+
+        // 초기화
+        function init() {
+            loadSettings();
+            applySettings();
+            
+            // 드래그 앤 드롭 이벤트
+            uploadScreen.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadScreen.classList.add('bg-blue-500/10');
+            });
+            uploadScreen.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadScreen.classList.remove('bg-blue-500/10');
+            });
+            uploadScreen.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadScreen.classList.remove('bg-blue-500/10');
+                if (e.dataTransfer.files.length) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            // 스크롤 이벤트 (진행률 및 자동 저장)
+            contentContainer.addEventListener('scroll', throttle(() => {
+                updateProgress();
+                saveProgress();
+            }, 500));
+            
+            // 설정 토글
+            document.getElementById('settings-toggle').addEventListener('click', toggleSettings);
+        }
+
+        // 파일 처리
+        function handleFile(file) {
+            if (file.type && file.type.indexOf('text') === -1 && !file.name.endsWith('.txt')) {
+                alert('TXT 파일만 지원합니다.');
+                return;
+            }
+
+            loaderOverlay.classList.remove('hidden');
+            const encoding = document.getElementById('encoding-select').value;
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                const text = e.target.result;
+                renderText(text, file.name);
+                loaderOverlay.classList.add('hidden');
+                
+                // 이전 저장된 위치가 있는지 확인
+                const savedScroll = localStorage.getItem(`scroll_${file.name}`);
+                if (savedScroll) {
+                    if(confirm("이전에 읽던 위치가 있습니다. 이어 보시겠습니까?")) {
+                        setTimeout(() => {
+                            contentContainer.scrollTop = parseInt(savedScroll);
+                        }, 100);
+                    }
+                }
+            };
+
+            reader.onerror = () => {
+                alert('파일을 읽는 중 오류가 발생했습니다.');
+                loaderOverlay.classList.add('hidden');
+            };
+
+            reader.readAsText(file, encoding);
+        }
+
+        function renderText(text, filename) {
+            currentFile = filename;
+            fileTitle.textContent = filename.replace('.txt', '');
+            
+            // HTML 이스케이프 및 줄바꿈 처리
+            // 성능을 위해 DocumentFragment 사용
+            const fragment = document.createDocumentFragment();
+            
+            // 텍스트 정제: 캐리지 리턴 제거, 연속된 공백 처리
+            const lines = text.split(/\r?\n/);
+            
+            let buffer = [];
+            
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (trimmed.length > 0) {
+                    const p = document.createElement('p');
+                    p.textContent = trimmed; // textContent는 자동으로 이스케이프 처리됨
+                    fragment.appendChild(p);
+                } else {
+                    // 빈 줄은 적절한 간격을 위해 br 포함한 p 또는 그냥 margin으로 처리
+                    // 여기서는 빈 P 태그를 추가하여 시각적 분리
+                    const emptyP = document.createElement('p');
+                    emptyP.innerHTML = '&nbsp;';
+                    fragment.appendChild(emptyP);
+                }
+            });
+
+            contentInner.innerHTML = '';
+            contentInner.appendChild(fragment);
+
+            // 화면 전환
+            uploadScreen.classList.add('hidden');
+            viewerScreen.classList.remove('hidden');
+        }
+
+        function resetApp() {
+            uploadScreen.classList.remove('hidden');
+            viewerScreen.classList.add('hidden');
+            fileInput.value = '';
+            contentInner.innerHTML = '';
+            currentFile = null;
+            document.title = "웹소설 리더";
+        }
+
+        // 설정 관리
+        function toggleSettings() {
+            settingsPanel.classList.toggle('panel-hidden');
+            settingsPanel.classList.toggle('panel-visible');
+        }
+
+        function setTheme(themeName) {
+            document.body.className = document.body.className.replace(/theme-\w+/, themeName);
+            settings.theme = themeName;
+            saveSettings();
+        }
+
+        function setFont(type) {
+            settings.fontFamily = type;
+            const sansBtn = document.getElementById('btn-font-sans');
+            const serifBtn = document.getElementById('btn-font-serif');
+            
+            if (type === 'sans') {
+                document.body.classList.remove('font-serif-kr');
+                document.body.classList.add('font-sans-kr');
+                
+                sansBtn.classList.add('bg-white/90', 'text-black', 'shadow-sm');
+                sansBtn.classList.remove('opacity-60', 'hover:bg-white/50');
+                
+                serifBtn.classList.remove('bg-white/90', 'text-black', 'shadow-sm');
+                serifBtn.classList.add('opacity-60', 'hover:bg-white/50');
+            } else {
+                document.body.classList.remove('font-sans-kr');
+                document.body.classList.add('font-serif-kr');
+                
+                serifBtn.classList.add('bg-white/90', 'text-black', 'shadow-sm');
+                serifBtn.classList.remove('opacity-60', 'hover:bg-white/50');
+                
+                sansBtn.classList.remove('bg-white/90', 'text-black', 'shadow-sm');
+                sansBtn.classList.add('opacity-60', 'hover:bg-white/50');
+            }
+            saveSettings();
+        }
+
+        function adjustSize(delta) {
+            settings.fontSize = Math.max(12, Math.min(40, settings.fontSize + delta));
+            applyStyleUpdates();
+            saveSettings();
+        }
+
+        function adjustLineHeight(delta) {
+            settings.lineHeight = Math.max(1.2, Math.min(3.0, settings.lineHeight + delta));
+            // 소수점 1자리로 제한
+            settings.lineHeight = Math.round(settings.lineHeight * 10) / 10;
+            applyStyleUpdates();
+            saveSettings();
+        }
+
+        function applyStyleUpdates() {
+            contentInner.style.fontSize = `${settings.fontSize}px`;
+            contentInner.style.lineHeight = settings.lineHeight;
+            document.getElementById('font-size-display').textContent = `${settings.fontSize}px`;
+        }
+
+        function applySettings() {
+            setTheme(settings.theme);
+            setFont(settings.fontFamily);
+            applyStyleUpdates();
+        }
+
+        function saveSettings() {
+            localStorage.setItem('webNovelReaderSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('webNovelReaderSettings');
+            if (saved) {
+                settings = { ...settings, ...JSON.parse(saved) };
+            }
+        }
+
+        // 유틸리티
+        function updateProgress() {
+            const scrollTop = contentContainer.scrollTop;
+            const scrollHeight = contentContainer.scrollHeight - contentContainer.clientHeight;
+            const percent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+            progressBar.style.width = `${percent}%`;
+        }
+
+        function saveProgress() {
+            if (currentFile) {
+                localStorage.setItem(`scroll_${currentFile}`, contentContainer.scrollTop);
+            }
+        }
+
+        function throttle(func, limit) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            }
+        }
+
+        // 앱 시작
+        init();
+
+        // 탭키 접근성 및 키보드 조작
+        document.addEventListener('keydown', (e) => {
+            if (viewerScreen.classList.contains('hidden')) return;
+            
+            if (e.key === 'Escape') {
+                if (settingsPanel.classList.contains('panel-visible')) {
+                    toggleSettings();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
