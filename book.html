@@ -96,7 +96,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                         </svg>
                     </button>
-                    <!-- 폴더 추가 버튼 (NEW) -->
+                    <!-- 폴더 추가 버튼 -->
                     <button onclick="openCreateCollectionModal()" class="text-gray-400 hover:text-yellow-500 transition-colors p-2 rounded-full hover:bg-gray-100" title="새 폴더 만들기">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -350,12 +350,12 @@
 
     <script>
         const DB_NAME = 'WebNovelLibrary';
-        const DB_VERSION = 2; // 버전 증가 (컬렉션 스토어 추가)
+        const DB_VERSION = 3; // 버전 증가 (중복 방지용 인덱스 추가)
         let db;
         let currentBookId = null;
         let currentBookData = null;
-        let currentCollectionId = null; // 현재 보고 있는 폴더 (null = 루트)
-        let movingBookId = null; // 이동 중인 책 ID
+        let currentCollectionId = null;
+        let movingBookId = null;
 
         let settings = {
             theme: 'theme-sepia',
@@ -392,7 +392,7 @@
             });
         }
 
-        // --- P2P Logic (생략된 부분 포함 기존 유지) ---
+        // --- P2P Logic ---
         function openSyncModal() { document.getElementById('sync-modal').classList.remove('hidden'); resetSyncView(); }
         function closeSyncModal() { document.getElementById('sync-modal').classList.add('hidden'); cleanupPeer(); stopScanner(); }
         function resetSyncView() {
@@ -465,60 +465,99 @@
             const collections = await getAllCollections();
             return { version: 2, books, collections, settings };
         }
+
+        // --- Import Logic (중복 체크 추가됨) ---
         async function importData(data) {
-            if(data.books) {
-                const tx = db.transaction(['books', 'collections'], 'readwrite');
-                const bStore = tx.objectStore('books');
-                const cStore = tx.objectStore('collections');
-                for(const b of data.books) { const {id, ...rest} = b; bStore.put(rest); } // 덮어쓰기 방지 X, 그냥 put (키 자동생성 X -> 기존 키 사용 시 충돌 가능성. 여기선 단순히 put. 실제론 복잡함)
-                // 간단히: 기존꺼 두고 추가하려면 add, 근데 중복체크 안함.
-                // data.books의 id를 지우고 add하면 새 책으로 등록됨.
-                // 컬렉션 매핑 유지를 위해선 id 관리가 필요하지만, 여기선 단순 병합.
-                // P2P 동기화 시 컬렉션 ID가 다르면 꼬일 수 있음. 
-                // 간편 해결: 컬렉션 이름으로 매핑하거나, 그냥 다 추가.
-                // 여기선 '가져오기' 느낌으로, 모든 책과 컬렉션을 새로 추가 (ID 제거)
-                
-                // 1. 컬렉션 먼저 추가 및 ID 매핑 생성
-                const collectionMap = {}; // oldId -> newId
-                if(data.collections) {
-                    for(const c of data.collections) {
-                        const {id: oldId, ...rest} = c;
+            if (!data.books) throw new Error("Invalid Data");
+
+            // 1. 기존 컬렉션 및 책 정보 메모리에 로드 (중복 체크용)
+            const myCollections = await getAllCollections();
+            const myBooks = await getAllBooks();
+            
+            // 컬렉션 이름으로 매핑 (이름 같으면 기존꺼 사용)
+            const collectionMap = {}; // oldId -> newId
+            const tx = db.transaction(['books', 'collections'], 'readwrite');
+            const cStore = tx.objectStore('collections');
+            const bStore = tx.objectStore('books');
+
+            // 2. 컬렉션 처리
+            if (data.collections) {
+                for (const c of data.collections) {
+                    const existing = myCollections.find(mc => mc.name === c.name);
+                    if (existing) {
+                        collectionMap[c.id] = existing.id;
+                    } else {
+                        // 없으면 새로 생성
+                        const { id, ...rest } = c;
                         const newId = await new Promise(res => {
                             const req = cStore.add(rest);
                             req.onsuccess = e => res(e.target.result);
                         });
-                        collectionMap[oldId] = newId;
+                        collectionMap[c.id] = newId;
+                        // 메모리에도 추가해둬야 같은 이름 중복 생성 방지됨 (이번 배치 내에서)
+                        myCollections.push({ ...rest, id: newId });
                     }
                 }
+            }
 
-                // 2. 책 추가 (컬렉션 ID 변환)
-                for(const b of data.books) {
-                    const {id, collectionId, ...rest} = b;
-                    if(collectionId && collectionMap[collectionId]) {
-                        rest.collectionId = collectionMap[collectionId];
-                    } else {
-                        rest.collectionId = null; // 매핑 안되면 루트로
-                    }
-                    bStore.add(rest);
+            // 3. 책 처리 (제목 중복 체크)
+            let addedCount = 0;
+            let skippedCount = 0;
+            
+            for (const b of data.books) {
+                // 제목으로 중복 확인
+                const existing = myBooks.find(mb => mb.title === b.title);
+                if (existing) {
+                    skippedCount++;
+                    continue; // 이미 있으면 건너뜀
                 }
 
-                if(data.settings) { settings = data.settings; saveSettings(); }
-            } else { throw new Error("Invalid Data"); }
+                // 컬렉션 ID 매핑
+                const { id, collectionId, ...rest } = b;
+                if (collectionId && collectionMap[collectionId]) {
+                    rest.collectionId = collectionMap[collectionId];
+                } else {
+                    rest.collectionId = null; // 매핑 실패 시 루트로
+                }
+                
+                bStore.add(rest);
+                addedCount++;
+            }
+
+            if (data.settings) { settings = data.settings; saveSettings(); }
+            
+            return { added: addedCount, skipped: skippedCount };
         }
 
-        // --- DB Functions ---
+        // --- DB Functions (v3 Upgrade) ---
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
                 request.onerror = () => reject("DB Error");
                 request.onupgradeneeded = (e) => {
                     const db = e.target.result;
+                    // 책 스토어
                     if (!db.objectStoreNames.contains('books')) {
                         const store = db.createObjectStore('books', { keyPath: 'id', autoIncrement: true });
                         store.createIndex('lastRead', 'lastRead', { unique: false });
+                        store.createIndex('title', 'title', { unique: false }); // v3: title 인덱스 추가
+                    } else {
+                        // 기존 스토어에 인덱스 추가
+                        const store = e.target.transaction.objectStore('books');
+                        if(!store.indexNames.contains('title')) {
+                            store.createIndex('title', 'title', { unique: false });
+                        }
                     }
+                    
+                    // 컬렉션 스토어
                     if (!db.objectStoreNames.contains('collections')) {
                         const store = db.createObjectStore('collections', { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('name', 'name', { unique: false }); // v3: name 인덱스 추가
+                    } else {
+                        const store = e.target.transaction.objectStore('collections');
+                        if(!store.indexNames.contains('name')) {
+                            store.createIndex('name', 'name', { unique: false });
+                        }
                     }
                 };
                 request.onsuccess = (e) => { db = e.target.result; resolve(db); };
