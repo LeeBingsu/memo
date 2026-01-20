@@ -66,9 +66,16 @@
     <!-- 1. 서재 화면 (Library) -->
     <div id="library-screen" class="flex-1 flex flex-col h-full bg-gray-50 text-gray-800 overflow-hidden">
         <header class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">내 서재</h1>
-                <p class="text-xs text-gray-500 mt-1">저장된 소설 목록</p>
+            <div class="flex items-center gap-2">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">내 서재</h1>
+                    <p class="text-xs text-gray-500 mt-1">저장된 소설 목록</p>
+                </div>
+                <button onclick="openInfoModal()" class="text-gray-400 hover:text-blue-500 transition-colors p-1" title="저장소 안내">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
             </div>
             <button onclick="openUploadModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
                 <span>+ 소설 추가</span>
@@ -189,6 +196,34 @@
         </div>
     </div>
 
+    <!-- 안내 모달 -->
+    <div id="info-modal" class="fixed inset-0 bg-black/50 z-[65] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 class="text-lg font-bold mb-3 text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                저장 공간 안내
+            </h3>
+            <div class="space-y-3 text-sm text-gray-600 leading-relaxed">
+                <p>
+                    <span class="font-bold text-gray-800">Q. PC에서 파일을 지워도 되나요?</span><br>
+                    A. 네! 서재에 추가된 책은 브라우저 내부에 복사되어 저장되므로, 원본 파일을 삭제해도 안전합니다.
+                </p>
+                <p>
+                    <span class="font-bold text-gray-800">Q. 서재가 사라질 수도 있나요?</span><br>
+                    A. 브라우저의 <span class="text-red-500 font-medium">'인터넷 사용 기록 삭제'</span>나 <span class="text-red-500 font-medium">'쿠키 삭제'</span>를 진행하면 서재가 초기화될 수 있습니다.
+                </p>
+                <p class="bg-blue-50 p-3 rounded-lg text-blue-700">
+                    💡 중요한 파일은 카드 우측 하단의 <span class="font-bold">다운로드 버튼</span>을 눌러 PC에 백업할 수 있습니다.
+                </p>
+            </div>
+            <div class="mt-6 text-right">
+                <button onclick="closeInfoModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium">확인</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 로딩 오버레이 -->
     <div id="loader-overlay" class="fixed inset-0 bg-black/50 z-[70] hidden flex items-center justify-center">
         <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center space-y-4">
@@ -237,9 +272,7 @@
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
                 request.onerror = (event) => reject("DB Open Error");
-                
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     if (!db.objectStoreNames.contains('books')) {
@@ -247,7 +280,6 @@
                         store.createIndex('lastRead', 'lastRead', { unique: false });
                     }
                 };
-
                 request.onsuccess = (event) => {
                     db = event.target.result;
                     resolve(db);
@@ -264,7 +296,7 @@
                     content: content,
                     progress: 0,
                     lastRead: new Date(),
-                    coverId: Math.floor(Math.random() * 5) + 1 // 1~5 랜덤 커버
+                    coverId: Math.floor(Math.random() * 5) + 1 
                 };
                 const request = store.add(book);
                 request.onsuccess = () => resolve(request.result);
@@ -276,9 +308,6 @@
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction(['books'], 'readonly');
                 const store = transaction.objectStore('books');
-                // 내용은 목록에 필요 없지만, IDB는 전체를 가져옴. 
-                // 성능 최적화를 위해선 cursor를 쓰거나 별도 메타데이터 스토어를 두지만, 
-                // 간단한 구현을 위해 전체 로드 후 map (보통 텍스트라 빠름)
                 const request = store.getAll();
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
@@ -320,11 +349,8 @@
         }
 
         // --- UI 로직 ---
-
-        // 서재 렌더링
         async function renderLibrary() {
             const books = await getAllBooks();
-            // 최신순 정렬
             books.sort((a, b) => b.lastRead - a.lastRead);
             
             const grid = document.getElementById('book-grid');
@@ -354,11 +380,18 @@
                         </div>
                         <div class="p-3 flex justify-between items-center bg-white">
                             <div class="text-xs text-gray-400" onclick="openBook(${book.id})">최근: ${date}</div>
-                            <button onclick="confirmDelete(event, ${book.id})" class="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-100 transition-colors" title="삭제">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+                            <div class="flex gap-1">
+                                <button onclick="downloadBook(event, ${book.id})" class="text-gray-400 hover:text-blue-500 p-1 rounded-full hover:bg-gray-100 transition-colors" title="다운로드(백업)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                </button>
+                                <button onclick="confirmDelete(event, ${book.id})" class="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-100 transition-colors" title="삭제">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     `;
                     grid.appendChild(el);
@@ -366,15 +399,36 @@
             }
         }
 
-        // 업로드 모달 관련
+        // 다운로드 (백업) 기능
+        async function downloadBook(e, id) {
+            e.stopPropagation();
+            const book = await getBook(id);
+            if (!book) return;
+
+            const element = document.createElement('a');
+            const file = new Blob([book.content], {type: 'text/plain'});
+            element.href = URL.createObjectURL(file);
+            element.download = `${book.title}.txt`;
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        // 모달 관련
         function openUploadModal() {
             document.getElementById('upload-modal').classList.remove('hidden');
             document.getElementById('file-input').value = '';
             document.getElementById('selected-filename').classList.add('hidden');
         }
-        
         function closeUploadModal() {
             document.getElementById('upload-modal').classList.add('hidden');
+        }
+
+        function openInfoModal() {
+            document.getElementById('info-modal').classList.remove('hidden');
+        }
+        function closeInfoModal() {
+            document.getElementById('info-modal').classList.add('hidden');
         }
 
         async function processUpload() {
@@ -428,7 +482,6 @@
             currentBookId = id;
             document.getElementById('viewer-title').textContent = book.title;
             
-            // 텍스트 렌더링
             const fragment = document.createDocumentFragment();
             const lines = book.content.split(/\r?\n/);
             lines.forEach(line => {
@@ -446,13 +499,11 @@
             contentInner.innerHTML = '';
             contentInner.appendChild(fragment);
 
-            // 화면 전환
             document.getElementById('library-screen').classList.add('hidden');
             document.getElementById('viewer-screen').classList.remove('hidden');
             
             applySettings();
 
-            // 스크롤 위치 복구
             if (book.scrollTop) {
                 setTimeout(() => {
                     document.getElementById('content-container').scrollTop = book.scrollTop;
@@ -463,9 +514,8 @@
         }
 
         function closeViewer() {
-            // 현재 위치 저장 후 닫기
             saveScrollPosition();
-            renderLibrary(); // 진행률 업데이트를 위해 다시 렌더링
+            renderLibrary();
             
             document.getElementById('viewer-screen').classList.add('hidden');
             document.getElementById('library-screen').classList.remove('hidden');
@@ -509,7 +559,7 @@
             }
         }
 
-        // --- 설정 관련 (기존 코드 유지 및 보완) ---
+        // 설정 로직
         function toggleSettings() {
             const panel = document.getElementById('settings-panel');
             panel.classList.toggle('panel-hidden');
@@ -520,28 +570,18 @@
             const viewer = document.getElementById('viewer-screen');
             viewer.className = viewer.className.replace(/theme-\w+/, themeName);
             settings.theme = themeName;
-            
-            // 모든 버튼 테두리 초기화
-            document.querySelectorAll('#settings-panel button[class*="rounded-full"]').forEach(btn => {
-                btn.classList.remove('ring-2', 'ring-blue-500');
-            });
-            // 선택된 버튼만 강조 (event.target을 못쓰니 DOM 탐색)
-            // 실제 구현에서는 onclick에 this를 넘기는게 좋으나 여기선 생략
             saveSettings();
         }
 
         function setFont(type) {
             settings.fontFamily = type;
-            const viewerBody = document.body; // body 폰트 변경
             const sansBtn = document.getElementById('btn-font-sans');
             const serifBtn = document.getElementById('btn-font-serif');
-            
-            // 뷰어 내부 폰트 클래스 토글
             const contentInner = document.getElementById('content-inner');
+            
             if (type === 'sans') {
                 contentInner.classList.remove('font-serif-kr');
                 contentInner.classList.add('font-sans-kr');
-                
                 sansBtn.classList.add('bg-white/90', 'text-black', 'shadow-sm');
                 sansBtn.classList.remove('opacity-60');
                 serifBtn.classList.remove('bg-white/90', 'text-black', 'shadow-sm');
@@ -549,7 +589,6 @@
             } else {
                 contentInner.classList.remove('font-sans-kr');
                 contentInner.classList.add('font-serif-kr');
-                
                 serifBtn.classList.add('bg-white/90', 'text-black', 'shadow-sm');
                 serifBtn.classList.remove('opacity-60');
                 sansBtn.classList.remove('bg-white/90', 'text-black', 'shadow-sm');
@@ -565,8 +604,7 @@
         }
 
         function adjustLineHeight(delta) {
-            settings.lineHeight = Math.max(1.2, Math.min(3.0, settings.lineHeight + delta));
-            settings.lineHeight = Math.round(settings.lineHeight * 10) / 10;
+            settings.lineHeight = Math.round((Math.max(1.2, Math.min(3.0, settings.lineHeight + delta))) * 10) / 10;
             applyStyleUpdates();
             saveSettings();
         }
