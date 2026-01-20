@@ -91,7 +91,7 @@
                         <p id="library-subtitle" class="text-xs text-gray-500 mt-1">저장된 소설 목록</p>
                     </div>
                     <!-- 데이터 관리 버튼 -->
-                    <button onclick="openSyncModal()" class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="기기 간 동기화 (P2P)">
+                    <button onclick="openSyncModal()" class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="데이터 관리 (백업/동기화)">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                         </svg>
@@ -204,35 +204,62 @@
         </div>
     </div>
 
-    <!-- P2P 동기화 모달 -->
+    <!-- P2P 및 데이터 관리 모달 -->
     <div id="sync-modal" class="fixed inset-0 bg-black/50 z-[65] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto">
             <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">✕</button>
             <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-                기기 간 동기화
+                데이터 관리 및 동기화
             </h3>
-            <p class="text-sm text-gray-600 mb-6">
-                QR코드를 스캔하거나 <span class="font-bold text-blue-600">5자리 코드</span>를 입력하여<br>기기끼리 직접 데이터를 주고받습니다.
-            </p>
-            <div id="sync-main-view" class="space-y-4">
-                <button onclick="startHostMode()" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
-                    <div class="text-left">
-                        <div class="font-bold">📤 데이터 보내기 (Host)</div>
-                        <div class="text-xs opacity-70">일회용 코드 생성 및 전송 대기</div>
+            
+            <!-- 1. 메인 선택 화면 -->
+            <div id="sync-main-view" class="space-y-6">
+                <!-- P2P 섹션 -->
+                <div>
+                    <h4 class="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">📡 기기 간 직접 전송 (P2P)</h4>
+                    <div class="space-y-3">
+                        <button onclick="startHostMode()" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
+                            <div class="text-left">
+                                <div class="font-bold">📤 보내기 (Host)</div>
+                                <div class="text-xs opacity-70">일회용 코드/QR로 전송</div>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                        <button onclick="startClientMode()" class="w-full bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
+                            <div class="text-left">
+                                <div class="font-bold">📥 받기 (Client)</div>
+                                <div class="text-xs opacity-70">코드 입력/QR 스캔</div>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        </button>
                     </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                </button>
-                <button onclick="startClientMode()" class="w-full bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
-                    <div class="text-left">
-                        <div class="font-bold">📥 데이터 받기 (Client)</div>
-                        <div class="text-xs opacity-70">코드 입력 또는 QR 스캔</div>
+                </div>
+
+                <hr class="border-gray-200">
+
+                <!-- 파일 백업 섹션 -->
+                <div>
+                    <h4 class="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">💾 파일 백업 및 복원</h4>
+                    <div class="space-y-3">
+                        <button onclick="exportAllData()" class="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 p-3 rounded-lg flex items-center justify-center gap-2 font-medium text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            전체 데이터 내보내기 (.json)
+                        </button>
+                        <div class="relative">
+                            <input type="file" id="backup-input" accept=".json" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="importFromFile(this)">
+                            <button class="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 p-3 rounded-lg flex items-center justify-center gap-2 font-medium text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                데이터 불러오기 (.json)
+                            </button>
+                        </div>
                     </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                </button>
+                </div>
             </div>
+
+            <!-- 2. Host 화면 -->
             <div id="sync-host-view" class="hidden flex flex-col items-center text-center space-y-4">
                 <p class="text-sm text-gray-600">받는 기기에 아래 코드를 입력하세요.</p>
                 <div class="bg-gray-50 border-2 border-dashed border-blue-300 rounded-xl p-4 w-full">
@@ -245,6 +272,8 @@
                 <div id="qrcode-container" class="bg-white p-2 rounded-lg border shadow-sm"></div>
                 <button onclick="resetSyncView()" class="text-gray-500 text-sm hover:underline mt-2">뒤로 가기</button>
             </div>
+
+            <!-- 3. Client 화면 -->
             <div id="sync-client-view" class="hidden flex flex-col space-y-4">
                 <div id="manual-input-container" class="space-y-4">
                     <div class="text-center">
@@ -263,6 +292,8 @@
                 </div>
                 <button onclick="resetSyncView()" class="text-gray-500 text-sm hover:underline text-center mt-2">뒤로 가기</button>
             </div>
+            
+            <!-- 상태 메시지 -->
             <div id="sync-status" class="mt-4 text-center hidden">
                 <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold animate-pulse">
                     <div class="w-2 h-2 bg-blue-600 rounded-full"></div>
@@ -350,7 +381,7 @@
 
     <script>
         const DB_NAME = 'WebNovelLibrary';
-        const DB_VERSION = 3; // 버전 증가 (중복 방지용 인덱스 추가)
+        const DB_VERSION = 3;
         let db;
         let currentBookId = null;
         let currentBookData = null;
@@ -392,7 +423,7 @@
             });
         }
 
-        // --- P2P Logic ---
+        // --- P2P & Data Sync Logic ---
         function openSyncModal() { document.getElementById('sync-modal').classList.remove('hidden'); resetSyncView(); }
         function closeSyncModal() { document.getElementById('sync-modal').classList.add('hidden'); cleanupPeer(); stopScanner(); }
         function resetSyncView() {
@@ -455,9 +486,62 @@
             conn.on('open', () => updateSyncStatus('연결 성공! 수신 대기...', true));
             conn.on('data', async (data) => {
                 updateSyncStatus('데이터 수신 중...', true);
-                try { await importData(data); updateSyncStatus('동기화 완료!', true); alert('동기화 완료!'); closeSyncModal(); renderLibrary(); } catch(e) { alert('실패: ' + e); }
+                try { 
+                    const result = await importData(data);
+                    updateSyncStatus('완료!', true);
+                    alert(`동기화 완료!\n추가됨: ${result.added}권\n건너뜀(중복): ${result.skipped}권`);
+                    closeSyncModal(); renderLibrary();
+                } catch(e) { alert('실패: ' + e); }
             });
             setTimeout(() => { if(!conn || !conn.open) updateSyncStatus('연결 시간 초과', true); }, 8000);
+        }
+
+        // --- File Backup/Restore ---
+        async function exportAllData() {
+            try {
+                showLoader('데이터 생성 중...');
+                const data = await getExportData();
+                const jsonStr = JSON.stringify(data);
+                const blob = new Blob([jsonStr], {type: "application/json"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `novel_library_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                hideLoader();
+                closeSyncModal();
+            } catch(e) {
+                hideLoader();
+                alert('내보내기 실패: ' + e);
+            }
+        }
+
+        async function importFromFile(input) {
+            const file = input.files[0];
+            if(!file) return;
+            if(!confirm('데이터를 불러오시겠습니까?\n중복된 책은 건너뛰고 새로운 책만 추가됩니다.')) {
+                input.value = '';
+                return;
+            }
+            showLoader('데이터 분석 중...');
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    const result = await importData(data);
+                    hideLoader();
+                    alert(`복원 완료!\n추가됨: ${result.added}권\n건너뜀(중복): ${result.skipped}권`);
+                    closeSyncModal();
+                    renderLibrary();
+                } catch(err) {
+                    hideLoader();
+                    alert('복원 실패: ' + err);
+                }
+            };
+            reader.readAsText(file);
         }
 
         async function getExportData() {
@@ -466,58 +550,52 @@
             return { version: 2, books, collections, settings };
         }
 
-        // --- Import Logic (중복 체크 추가됨) ---
+        // --- Import Logic (중복 체크) ---
         async function importData(data) {
             if (!data.books) throw new Error("Invalid Data");
 
-            // 1. 기존 컬렉션 및 책 정보 메모리에 로드 (중복 체크용)
             const myCollections = await getAllCollections();
             const myBooks = await getAllBooks();
             
-            // 컬렉션 이름으로 매핑 (이름 같으면 기존꺼 사용)
-            const collectionMap = {}; // oldId -> newId
+            const collectionMap = {};
             const tx = db.transaction(['books', 'collections'], 'readwrite');
             const cStore = tx.objectStore('collections');
             const bStore = tx.objectStore('books');
 
-            // 2. 컬렉션 처리
+            // 1. 컬렉션 처리 (이름 같으면 재사용)
             if (data.collections) {
                 for (const c of data.collections) {
                     const existing = myCollections.find(mc => mc.name === c.name);
                     if (existing) {
                         collectionMap[c.id] = existing.id;
                     } else {
-                        // 없으면 새로 생성
                         const { id, ...rest } = c;
                         const newId = await new Promise(res => {
                             const req = cStore.add(rest);
                             req.onsuccess = e => res(e.target.result);
                         });
                         collectionMap[c.id] = newId;
-                        // 메모리에도 추가해둬야 같은 이름 중복 생성 방지됨 (이번 배치 내에서)
                         myCollections.push({ ...rest, id: newId });
                     }
                 }
             }
 
-            // 3. 책 처리 (제목 중복 체크)
+            // 2. 책 처리 (제목 중복 시 스킵)
             let addedCount = 0;
             let skippedCount = 0;
             
             for (const b of data.books) {
-                // 제목으로 중복 확인
                 const existing = myBooks.find(mb => mb.title === b.title);
                 if (existing) {
                     skippedCount++;
-                    continue; // 이미 있으면 건너뜀
+                    continue;
                 }
 
-                // 컬렉션 ID 매핑
                 const { id, collectionId, ...rest } = b;
                 if (collectionId && collectionMap[collectionId]) {
                     rest.collectionId = collectionMap[collectionId];
                 } else {
-                    rest.collectionId = null; // 매핑 실패 시 루트로
+                    rest.collectionId = null;
                 }
                 
                 bStore.add(rest);
@@ -529,42 +607,28 @@
             return { added: addedCount, skipped: skippedCount };
         }
 
-        // --- DB Functions (v3 Upgrade) ---
+        // --- DB Functions ---
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
                 request.onerror = () => reject("DB Error");
                 request.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    // 책 스토어
                     if (!db.objectStoreNames.contains('books')) {
                         const store = db.createObjectStore('books', { keyPath: 'id', autoIncrement: true });
                         store.createIndex('lastRead', 'lastRead', { unique: false });
-                        store.createIndex('title', 'title', { unique: false }); // v3: title 인덱스 추가
-                    } else {
-                        // 기존 스토어에 인덱스 추가
-                        const store = e.target.transaction.objectStore('books');
-                        if(!store.indexNames.contains('title')) {
-                            store.createIndex('title', 'title', { unique: false });
-                        }
+                        store.createIndex('title', 'title', { unique: false });
                     }
-                    
-                    // 컬렉션 스토어
                     if (!db.objectStoreNames.contains('collections')) {
                         const store = db.createObjectStore('collections', { keyPath: 'id', autoIncrement: true });
-                        store.createIndex('name', 'name', { unique: false }); // v3: name 인덱스 추가
-                    } else {
-                        const store = e.target.transaction.objectStore('collections');
-                        if(!store.indexNames.contains('name')) {
-                            store.createIndex('name', 'name', { unique: false });
-                        }
+                        store.createIndex('name', 'name', { unique: false });
                     }
                 };
                 request.onsuccess = (e) => { db = e.target.result; resolve(db); };
             });
         }
 
-        // DB Helpers
+        // DB Helpers (생략 없이 유지)
         function getAllCollections() {
             return new Promise((resolve) => {
                 const tx = db.transaction(['collections'], 'readonly');
@@ -640,9 +704,8 @@
             const books = await getAllBooks();
             const collections = await getAllCollections();
             
-            // 필터링
             const filteredBooks = books.filter(b => {
-                if(collectionId === null) return !b.collectionId; // 루트면 컬렉션 없는거
+                if(collectionId === null) return !b.collectionId;
                 return b.collectionId === collectionId;
             });
             filteredBooks.sort((a, b) => b.lastRead - a.lastRead);
@@ -654,7 +717,6 @@
             
             grid.innerHTML = '';
             
-            // 헤더 상태 업데이트
             if (collectionId !== null) {
                 const col = collections.find(c => c.id === collectionId);
                 titleEl.textContent = col ? col.name : '폴더';
@@ -666,7 +728,6 @@
                 backBtn.classList.add('hidden');
             }
 
-            // 루트일 때만 폴더 렌더링
             if (collectionId === null) {
                 collections.forEach(col => {
                     const el = document.createElement('div');
@@ -681,7 +742,6 @@
                 });
             }
 
-            // 책 렌더링
             filteredBooks.forEach(book => {
                 const progress = book.progress ? Math.round(book.progress) : 0;
                 const el = document.createElement('div');
@@ -693,15 +753,11 @@
                     </div>
                     <div class="p-3 flex justify-between items-center bg-white relative">
                         <div class="text-xs text-gray-400 w-full" onclick="openBook(${book.id})">최근: ${new Date(book.lastRead).toLocaleDateString()}</div>
-                        
-                        <!-- 메뉴 버튼 -->
                         <button onclick="toggleCardMenu(event, ${book.id})" class="p-1 rounded-full hover:bg-gray-100 text-gray-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                             </svg>
                         </button>
-
-                        <!-- 드롭다운 메뉴 -->
                         <div id="menu-${book.id}" class="hidden absolute right-2 bottom-10 w-32 bg-white rounded-lg shadow-xl border border-gray-100 z-20 flex flex-col py-1 text-sm">
                             <button onclick="openMoveBookModal(event, ${book.id})" class="text-left px-4 py-2 hover:bg-gray-50 text-gray-700">📂 이동</button>
                             <button onclick="downloadBook(event, ${book.id})" class="text-left px-4 py-2 hover:bg-gray-50 text-gray-700">💾 다운로드</button>
@@ -721,29 +777,17 @@
             }
         }
 
-        function navigateToRoot() {
-            renderLibrary(null);
-        }
+        function navigateToRoot() { renderLibrary(null); }
 
-        // --- Card Menu ---
         function toggleCardMenu(e, id) {
             e.stopPropagation();
-            // 다른 열린 메뉴 닫기
-            document.querySelectorAll('[id^="menu-"]').forEach(el => {
-                if (el.id !== `menu-${id}`) el.classList.add('hidden');
-            });
+            document.querySelectorAll('[id^="menu-"]').forEach(el => { if (el.id !== `menu-${id}`) el.classList.add('hidden'); });
             const menu = document.getElementById(`menu-${id}`);
             menu.classList.toggle('hidden');
-            
-            // 화면 클릭 시 메뉴 닫기 이벤트 등록
-            const closeMenu = () => {
-                menu.classList.add('hidden');
-                document.removeEventListener('click', closeMenu);
-            };
+            const closeMenu = () => { menu.classList.add('hidden'); document.removeEventListener('click', closeMenu); };
             setTimeout(() => document.addEventListener('click', closeMenu), 0);
         }
 
-        // --- 컬렉션 관리 ---
         function openCreateCollectionModal() { document.getElementById('create-collection-modal').classList.remove('hidden'); document.getElementById('new-collection-name').focus(); }
         function closeCreateCollectionModal() { document.getElementById('create-collection-modal').classList.add('hidden'); document.getElementById('new-collection-name').value = ''; }
         
@@ -756,14 +800,12 @@
         }
 
         async function openMoveBookModal(e, bookId) {
-            e.stopPropagation(); // 메뉴 닫힘 방지 (이미 이벤트 버블링으로 닫힐 수 있으나 안전장치)
+            e.stopPropagation();
             movingBookId = bookId;
             const listEl = document.getElementById('move-collection-list');
             listEl.innerHTML = '';
             
             const collections = await getAllCollections();
-            
-            // 루트로 이동 옵션
             const rootBtn = document.createElement('button');
             rootBtn.className = "w-full text-left p-3 rounded hover:bg-gray-50 border-b border-gray-100 font-medium";
             rootBtn.textContent = "🏠 내 서재 (메인)";
@@ -777,7 +819,6 @@
                 btn.onclick = () => moveBook(col.id);
                 listEl.appendChild(btn);
             });
-
             document.getElementById('move-book-modal').classList.remove('hidden');
         }
 
@@ -791,7 +832,6 @@
             }
         }
 
-        // --- 기본 기능 ---
         function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); document.getElementById('file-input').value = ''; document.getElementById('selected-filename').classList.add('hidden'); }
         function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); }
         function openWriteModal() { document.getElementById('write-title').value = ''; document.getElementById('write-content').value = ''; document.getElementById('write-modal').classList.remove('hidden'); }
@@ -828,7 +868,6 @@
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
-        // --- 뷰어 ---
         async function openBook(id) {
             showLoader('로딩 중...');
             const book = await getBook(id);
