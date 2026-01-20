@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>웹소설 리더 - 내 서재</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- P2P 통신 및 QR 관련 라이브러리 -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         /* 커스텀 스크롤바 */
@@ -16,7 +21,7 @@
         .font-sans-kr { font-family: 'Noto Sans KR', sans-serif; }
         .font-serif-kr { font-family: 'Noto Serif KR', serif; }
 
-        /* --- 테마 정의 (CSS 변수) --- */
+        /* --- 테마 정의 --- */
         .theme-white { --bg-color: #ffffff; --text-color: #111827; }
         .theme-sepia { --bg-color: #f6f1e3; --text-color: #5f4b32; } 
         .theme-dark { --bg-color: #374151; --text-color: #e5e7eb; }
@@ -61,6 +66,12 @@
             width: 40px; height: 40px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* QR 스캔 영역 스타일 */
+        #reader { width: 100%; border-radius: 0.5rem; overflow: hidden; }
+        
+        /* 5자리 코드 입력 스타일 */
+        .code-input { letter-spacing: 0.5em; text-align: center; font-size: 1.5rem; font-family: monospace; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen flex flex-col font-sans-kr overflow-hidden text-gray-800 touch-pan-y">
@@ -68,16 +79,24 @@
     <!-- 1. 서재 화면 (Library) -->
     <div id="library-screen" class="flex-1 flex flex-col h-full bg-gray-50 text-gray-800 overflow-hidden">
         <header class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm z-10 gap-4">
-            <div class="flex items-center gap-2 w-full md:w-auto">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-800">내 서재</h1>
-                    <p class="text-xs text-gray-500 mt-1">저장된 소설 목록</p>
+            <div class="flex items-center justify-between w-full md:w-auto gap-4">
+                <div class="flex items-center gap-2">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">내 서재</h1>
+                        <p class="text-xs text-gray-500 mt-1">저장된 소설 목록</p>
+                    </div>
+                    <!-- 데이터 관리 버튼 -->
+                    <button onclick="openSyncModal()" class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="기기 간 동기화 (P2P)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                    </button>
+                    <button onclick="openInfoModal()" class="text-gray-400 hover:text-blue-500 transition-colors p-1" title="도움말">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </button>
                 </div>
-                <button onclick="openInfoModal()" class="text-gray-400 hover:text-blue-500 transition-colors p-1" title="저장소 안내">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </button>
             </div>
             <div class="flex gap-2 w-full md:w-auto">
                 <button onclick="openWriteModal()" class="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors shadow-sm">
@@ -103,7 +122,7 @@
             <div id="empty-state" class="hidden h-full flex flex-col items-center justify-center text-gray-400 space-y-4 pb-20">
                 <div class="text-6xl">📚</div>
                 <p class="text-lg">서재가 비어있습니다.</p>
-                <p class="text-sm">우측 상단 버튼을 눌러 소설을 추가하거나 작성해보세요.</p>
+                <p class="text-sm">우측 상단 버튼을 눌러 소설을 추가하거나 복원해보세요.</p>
             </div>
         </main>
     </div>
@@ -117,8 +136,12 @@
 
         <!-- 뷰어 헤더 -->
         <header class="viewer-header-gradient absolute top-0 w-full p-4 flex justify-between items-center z-40 h-20 transition-opacity duration-300 opacity-0 hover:opacity-100">
-            <button onclick="closeViewer()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm">
-                <span>← 나가기</span>
+            <!-- 뒤로가기 버튼 -->
+            <button onclick="handleBack()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>뒤로가기</span>
             </button>
             <h2 id="viewer-title" class="text-lg font-bold truncate max-w-[40%] text-center px-4 drop-shadow-md">제목</h2>
             <button onclick="shareNovel()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="공유하기">
@@ -186,6 +209,113 @@
         </div>
     </div>
 
+    <!-- P2P 동기화 모달 -->
+    <div id="sync-modal" class="fixed inset-0 bg-black/50 z-[65] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[90vh]">
+            <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">✕</button>
+            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                기기 간 동기화
+            </h3>
+            <p class="text-sm text-gray-600 mb-6">
+                QR코드를 스캔하거나 <span class="font-bold text-blue-600">5자리 코드</span>를 입력하여<br>기기끼리 직접 데이터를 주고받습니다.
+            </p>
+            
+            <!-- 1. 메인 선택 화면 -->
+            <div id="sync-main-view" class="space-y-4">
+                <button onclick="startHostMode()" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
+                    <div class="text-left">
+                        <div class="font-bold">📤 데이터 보내기 (Host)</div>
+                        <div class="text-xs opacity-70">일회용 코드 생성 및 전송 대기</div>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </button>
+
+                <button onclick="startClientMode()" class="w-full bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
+                    <div class="text-left">
+                        <div class="font-bold">📥 데이터 받기 (Client)</div>
+                        <div class="text-xs opacity-70">코드 입력 또는 QR 스캔</div>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 2. Host 화면 (코드 표시) -->
+            <div id="sync-host-view" class="hidden flex flex-col items-center text-center space-y-4">
+                <p class="text-sm text-gray-600">받는 기기에 아래 코드를 입력하세요.</p>
+                
+                <!-- 5자리 코드 표시 영역 -->
+                <div class="bg-gray-50 border-2 border-dashed border-blue-300 rounded-xl p-4 w-full">
+                     <p class="text-xs text-gray-500 mb-1">일회용 연결 코드</p>
+                     <div id="host-code-display" class="text-4xl font-mono font-bold tracking-widest text-blue-600 select-all">
+                        -----
+                     </div>
+                </div>
+
+                <div class="relative w-full flex items-center py-2">
+                     <div class="flex-grow border-t border-gray-200"></div>
+                     <span class="flex-shrink-0 mx-2 text-gray-400 text-xs">또는 QR 스캔</span>
+                     <div class="flex-grow border-t border-gray-200"></div>
+                </div>
+
+                <div id="qrcode-container" class="bg-white p-2 rounded-lg border shadow-sm"></div>
+                
+                <button onclick="resetSyncView()" class="text-gray-500 text-sm hover:underline mt-2">뒤로 가기</button>
+            </div>
+
+            <!-- 3. Client 화면 (입력/스캔) -->
+            <div id="sync-client-view" class="hidden flex flex-col space-y-4">
+                
+                <!-- 코드 입력 -->
+                <div id="manual-input-container" class="space-y-4">
+                    <div class="text-center">
+                        <label class="text-sm text-gray-600 block mb-2">보내는 기기의 5자리 코드를 입력하세요</label>
+                        <input type="number" id="target-peer-id" placeholder="12345" class="code-input w-full border-2 border-gray-300 rounded-xl p-3 outline-none focus:border-blue-500 focus:bg-blue-50 transition-colors" maxlength="5">
+                    </div>
+                    <button onclick="connectToPeer()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition-transform active:scale-95">
+                        연결하기
+                    </button>
+                    
+                    <div class="relative w-full flex items-center py-2">
+                        <div class="flex-grow border-t border-gray-200"></div>
+                        <span class="flex-shrink-0 mx-2 text-gray-400 text-xs">또는 QR 스캔</span>
+                        <div class="flex-grow border-t border-gray-200"></div>
+                   </div>
+
+                   <button onclick="startScanner()" class="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-200 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        카메라 켜기
+                    </button>
+                </div>
+
+                <!-- QR 스캐너 (초기 숨김) -->
+                <div id="qr-reader-container" class="hidden">
+                    <div id="reader" class="bg-black"></div>
+                    <button onclick="stopScanner()" class="w-full mt-2 py-2 bg-gray-200 rounded text-sm font-medium">카메라 끄기</button>
+                </div>
+
+                <button onclick="resetSyncView()" class="text-gray-500 text-sm hover:underline text-center mt-2">뒤로 가기</button>
+            </div>
+
+            <!-- 상태 메시지 -->
+            <div id="sync-status" class="mt-4 text-center hidden">
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold animate-pulse">
+                    <div class="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <span id="sync-status-text">상태 메시지</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 파일 업로드 모달 -->
     <div id="upload-modal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
@@ -218,12 +348,10 @@
                 <h3 class="text-xl font-bold text-gray-800">소설 쓰기</h3>
                 <button onclick="closeWriteModal()" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            
             <div class="flex-1 flex flex-col gap-4 overflow-hidden">
                 <input type="text" id="write-title" placeholder="제목을 입력하세요" class="w-full text-lg font-bold p-3 border-b-2 border-gray-200 focus:border-green-500 outline-none">
                 <textarea id="write-content" placeholder="내용을 입력하세요..." class="w-full flex-1 p-3 resize-none focus:bg-gray-50 outline-none text-base leading-relaxed overflow-y-auto"></textarea>
             </div>
-
             <div class="mt-4 flex justify-end gap-3">
                 <button onclick="closeWriteModal()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">취소</button>
                 <button onclick="saveWrittenNovel()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-sm font-bold">저장하기</button>
@@ -241,11 +369,8 @@
                 안내 및 기능
             </h3>
             <div class="space-y-3 text-sm text-gray-600 leading-relaxed">
-                <p><span class="font-bold text-gray-800">Q. PC에서 파일을 지워도 되나요?</span><br>A. 네! 서재에 저장된 책은 브라우저 내부에 보관됩니다.</p>
-                <p><span class="font-bold text-gray-800">Q. 공유는 어떻게 하나요?</span><br>A. 소설을 열고 우측 상단 공유 아이콘을 누르면 텍스트를 공유하거나 복사할 수 있습니다.</p>
-                <p class="bg-blue-50 p-3 rounded-lg text-blue-700">
-                    💡 서재에 있는 책은 <span class="font-bold">다운로드</span>하여 PC에 백업할 수 있습니다.
-                </p>
+                <p><span class="font-bold text-gray-800">Q. 동기화는 어떻게 하나요?</span><br>A. <span class="font-bold text-blue-600">⇄ 버튼</span>을 누르고 '보내기'를 선택하면 5자리 코드가 나옵니다. 다른 기기에서 '받기'를 누르고 코드를 입력하세요.</p>
+                <p><span class="font-bold text-gray-800">Q. 파일이 사라졌어요.</span><br>A. 브라우저 쿠키/캐시 삭제 시 데이터가 사라집니다. 중요한 소설은 주기적으로 백업하세요.</p>
             </div>
             <div class="mt-6 text-right">
                 <button onclick="closeInfoModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium">확인</button>
@@ -266,7 +391,7 @@
         const DB_VERSION = 1;
         let db;
         let currentBookId = null;
-        let currentBookData = null; // 공유를 위해 현재 책 데이터 저장
+        let currentBookData = null;
         let settings = {
             theme: 'theme-sepia',
             fontSize: 20,
@@ -274,12 +399,16 @@
             fontFamily: 'sans'
         };
 
+        // --- P2P Sync Variables ---
+        let peer = null;
+        let conn = null;
+        let html5QrCode = null;
+
         async function init() {
             loadSettings();
             await initDB();
             await renderLibrary();
             
-            // 파일 입력 감지
             document.getElementById('file-input').addEventListener('change', function() {
                 if(this.files[0]) {
                     document.getElementById('selected-filename').textContent = this.files[0].name;
@@ -287,13 +416,223 @@
                 }
             });
 
-            // 스크롤 저장
             document.getElementById('content-container').addEventListener('scroll', throttle(() => {
                 updateProgress();
                 if(currentBookId) saveScrollPosition();
             }, 1000));
+            
+            window.addEventListener('popstate', (event) => {
+                if (!event.state || event.state.view !== 'reader') {
+                    closeViewerUI();
+                }
+            });
         }
 
+        // --- P2P / PeerJS Logic ---
+        
+        function openSyncModal() {
+            document.getElementById('sync-modal').classList.remove('hidden');
+            resetSyncView();
+        }
+
+        function closeSyncModal() {
+            document.getElementById('sync-modal').classList.add('hidden');
+            cleanupPeer();
+            stopScanner();
+        }
+
+        function resetSyncView() {
+            document.getElementById('sync-main-view').classList.remove('hidden');
+            document.getElementById('sync-host-view').classList.add('hidden');
+            document.getElementById('sync-client-view').classList.add('hidden');
+            updateSyncStatus('', false);
+            document.getElementById('host-code-display').textContent = '-----';
+            document.getElementById('qrcode-container').innerHTML = '';
+            document.getElementById('target-peer-id').value = '';
+            
+            cleanupPeer();
+            stopScanner();
+        }
+
+        function cleanupPeer() {
+            if (conn) { conn.close(); conn = null; }
+            if (peer) { peer.destroy(); peer = null; }
+        }
+
+        function updateSyncStatus(msg, show) {
+            const el = document.getElementById('sync-status');
+            const textEl = document.getElementById('sync-status-text');
+            textEl.textContent = msg;
+            if(show) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
+        function generateShortId() {
+            // 5자리 랜덤 숫자 생성 (10000 ~ 99999)
+            return Math.floor(10000 + Math.random() * 90000).toString();
+        }
+
+        // 1. Host Mode (Sender)
+        function startHostMode() {
+            document.getElementById('sync-main-view').classList.add('hidden');
+            document.getElementById('sync-host-view').classList.remove('hidden');
+            updateSyncStatus('코드 생성 중...', true);
+
+            // 5자리 ID 생성 시도
+            const shortId = generateShortId();
+            
+            // PeerJS는 서버에 ID가 중복되면 에러를 뱉음.
+            // 여기서는 간단하게 랜덤 ID 사용 (충돌 확률 낮음)
+            peer = new Peer(shortId);
+            
+            peer.on('open', (id) => {
+                document.getElementById('host-code-display').textContent = id;
+                updateSyncStatus('상대방의 연결을 기다리는 중...', true);
+                
+                // Generate QR
+                const qrContainer = document.getElementById('qrcode-container');
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, {
+                    text: id,
+                    width: 160,
+                    height: 160
+                });
+            });
+
+            peer.on('connection', (c) => {
+                conn = c;
+                updateSyncStatus('연결됨! 데이터 전송 준비 중...', true);
+                
+                conn.on('open', async () => {
+                    updateSyncStatus('데이터 전송 중...', true);
+                    const exportData = await getExportData();
+                    conn.send(exportData);
+                    updateSyncStatus('전송 완료!', true);
+                });
+            });
+
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    // ID 충돌 시 재시도 (매우 드묾)
+                    cleanupPeer();
+                    startHostMode(); 
+                } else {
+                    alert('연결 오류: ' + err.type);
+                    resetSyncView();
+                }
+            });
+        }
+
+        // 2. Client Mode (Receiver)
+        function startClientMode() {
+            document.getElementById('sync-main-view').classList.add('hidden');
+            document.getElementById('sync-client-view').classList.remove('hidden');
+            updateSyncStatus('', false);
+            // Client는 별도 ID 지정 없이 자동 생성된 ID 사용
+            peer = new Peer(); 
+            peer.on('error', err => alert('오류: ' + err.type));
+        }
+
+        function startScanner() {
+            document.getElementById('manual-input-container').classList.add('hidden');
+            document.getElementById('qr-reader-container').classList.remove('hidden');
+
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                alert('카메라 시작 실패: ' + err);
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }).catch(err => console.log(err));
+            }
+            document.getElementById('qr-reader-container').classList.add('hidden');
+            document.getElementById('manual-input-container').classList.remove('hidden');
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            stopScanner();
+            document.getElementById('target-peer-id').value = decodedText;
+            connectToPeer();
+        }
+
+        function connectToPeer() {
+            const targetId = document.getElementById('target-peer-id').value.trim();
+            if (!targetId || targetId.length !== 5) {
+                return alert('5자리 코드를 정확히 입력해주세요.');
+            }
+
+            updateSyncStatus('연결 시도 중...', true);
+            
+            conn = peer.connect(targetId);
+
+            conn.on('open', () => {
+                updateSyncStatus('연결 성공! 데이터 수신 대기...', true);
+            });
+
+            conn.on('data', async (data) => {
+                updateSyncStatus('데이터 수신 중...', true);
+                try {
+                    await importData(data);
+                    updateSyncStatus('동기화 완료!', true);
+                    alert('동기화가 완료되었습니다!\n서재가 업데이트되었습니다.');
+                    closeSyncModal();
+                    renderLibrary();
+                } catch (e) {
+                    alert('데이터 처리 실패: ' + e);
+                }
+            });
+            
+            // 5초 후에도 연결 안되면 타임아웃 처리
+            setTimeout(() => {
+                if(!conn || !conn.open) {
+                    updateSyncStatus('연결 시간이 초과되었습니다. 코드를 확인해주세요.', true);
+                }
+            }, 8000);
+
+            conn.on('error', (err) => alert('연결 오류: ' + err));
+        }
+
+        // --- Data Helpers ---
+        async function getExportData() {
+            const books = await getAllBooks();
+            return {
+                version: 1,
+                books: books,
+                settings: settings
+            };
+        }
+
+        async function importData(data) {
+            if(data.books && Array.isArray(data.books)) {
+                const tx = db.transaction(['books'], 'readwrite');
+                const store = tx.objectStore('books');
+                // 기존 데이터 유지 + 추가 (ID 충돌 방지 위해 새 ID 발급)
+                for(const book of data.books) {
+                    const { id, ...bookData } = book;
+                    store.add(bookData);
+                }
+                if(data.settings) {
+                    settings = data.settings;
+                    saveSettings();
+                }
+                return new Promise((resolve) => {
+                    tx.oncomplete = () => resolve();
+                });
+            } else {
+                throw new Error("Invalid Data");
+            }
+        }
+
+        // --- DB & Core Functions ---
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -408,7 +747,6 @@
             document.body.removeChild(element);
         }
 
-        // --- 모달 관리 ---
         function openUploadModal() {
             document.getElementById('upload-modal').classList.remove('hidden');
             document.getElementById('file-input').value = '';
@@ -426,7 +764,6 @@
         function openInfoModal() { document.getElementById('info-modal').classList.remove('hidden'); }
         function closeInfoModal() { document.getElementById('info-modal').classList.add('hidden'); }
 
-        // --- 업로드 및 저장 ---
         async function processUpload() {
             const file = document.getElementById('file-input').files[0];
             if (!file) { alert('파일을 선택해주세요.'); return; }
@@ -450,10 +787,8 @@
         async function saveWrittenNovel() {
             const title = document.getElementById('write-title').value.trim();
             const content = document.getElementById('write-content').value;
-            
             if (!title) { alert('제목을 입력해주세요.'); return; }
             if (!content) { alert('내용을 입력해주세요.'); return; }
-
             closeWriteModal();
             showLoader('저장 중...');
             try {
@@ -471,14 +806,12 @@
             if(confirm('정말 삭제하시겠습니까?')) { await deleteBook(id); await renderLibrary(); }
         }
 
-        // --- 뷰어 기능 ---
         async function openBook(id) {
             showLoader('책 펴는 중...');
             const book = await getBook(id);
             if (!book) { alert('책을 찾을 수 없습니다.'); hideLoader(); return; }
-            
             currentBookId = id;
-            currentBookData = book; // 공유용 데이터
+            currentBookData = book;
             document.getElementById('viewer-title').textContent = book.title;
             
             const fragment = document.createDocumentFragment();
@@ -496,6 +829,7 @@
             contentInner.appendChild(fragment);
             document.getElementById('library-screen').classList.add('hidden');
             document.getElementById('viewer-screen').classList.remove('hidden');
+            history.pushState({ view: 'reader', bookId: id }, '', '#reader');
             applySettings();
             if (book.scrollTop) {
                 setTimeout(() => { document.getElementById('content-container').scrollTop = book.scrollTop; }, 100);
@@ -503,32 +837,31 @@
             hideLoader();
         }
 
-        // --- 공유 기능 ---
         async function shareNovel() {
             if (!currentBookData) return;
-
             const shareData = {
                 title: currentBookData.title,
                 text: currentBookData.content.substring(0, 5000) + (currentBookData.content.length > 5000 ? "\n...(생략됨)" : ""),
             };
-
             if (navigator.share) {
-                try {
-                    await navigator.share(shareData);
-                } catch (err) {
-                    if (err.name !== 'AbortError') console.error('Share failed:', err);
-                }
+                try { await navigator.share(shareData); } catch (err) { if (err.name !== 'AbortError') console.error('Share failed:', err); }
             } else {
                 try {
                     await navigator.clipboard.writeText(currentBookData.content);
                     alert('소설 내용이 클립보드에 복사되었습니다.');
-                } catch (err) {
-                    alert('복사에 실패했습니다.');
-                }
+                } catch (err) { alert('복사에 실패했습니다.'); }
             }
         }
 
-        function closeViewer() {
+        function handleBack() {
+            if (history.state && history.state.view === 'reader') {
+                history.back();
+            } else {
+                closeViewerUI();
+            }
+        }
+
+        function closeViewerUI() {
             saveScrollPosition();
             renderLibrary();
             document.getElementById('viewer-screen').classList.add('hidden');
