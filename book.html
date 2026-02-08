@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>웹소설 리더 - 내 서재</title>
+    <title>웹소설 리더</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -73,7 +73,6 @@
         #reader { width: 100%; border-radius: 0.5rem; overflow: hidden; }
         .code-input { letter-spacing: 0.5em; text-align: center; font-size: 1.5rem; font-family: monospace; }
         
-        /* 네비게이션 버튼 스타일 */
         .nav-btn {
             background-color: rgba(0,0,0,0.05);
             padding: 1rem;
@@ -84,12 +83,22 @@
             cursor: pointer;
         }
         .nav-btn:hover { background-color: rgba(0,0,0,0.1); }
-        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 플로팅 버튼 스타일 */
+        .fab-btn {
+            width: 3rem; height: 3rem;
+            border-radius: 9999px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s, background-color 0.2s;
+            backdrop-filter: blur(4px);
+        }
+        .fab-btn:active { transform: scale(0.95); }
+        .rotate-45 { transform: rotate(45deg); }
     </style>
 </head>
 <body class="bg-gray-50 h-screen flex flex-col font-sans-kr overflow-hidden text-gray-800 touch-pan-y">
 
-    <!-- 1. 서재 화면 (Library) -->
     <div id="library-screen" class="flex-1 flex flex-col h-full bg-gray-50 text-gray-800 overflow-hidden">
         <header class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm z-10 gap-4">
             <div class="flex items-center justify-between w-full md:w-auto gap-4">
@@ -105,13 +114,11 @@
                     </div>
                     
                     <div class="flex items-center gap-1 ml-2">
-                        <!-- 데이터 관리 버튼 -->
                         <button onclick="openSyncModal()" class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="데이터 관리">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                             </svg>
                         </button>
-                        <!-- 폴더 추가 버튼 -->
                         <button onclick="openCreateCollectionModal()" class="text-gray-400 hover:text-yellow-500 transition-colors p-2 rounded-full hover:bg-gray-100" title="새 폴더 만들기">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -122,7 +129,6 @@
             </div>
             
             <div class="flex items-center gap-2 w-full md:w-auto justify-end">
-                <!-- 정렬 버튼 -->
                 <button onclick="cycleSort()" id="sort-btn" class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
@@ -149,8 +155,7 @@
 
         <main class="flex-1 overflow-y-auto p-6" id="library-container">
             <div id="book-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
-                <!-- 폴더와 책 카드들이 여기에 동적으로 추가됨 -->
-            </div>
+                </div>
             
             <div id="empty-state" class="hidden h-full flex flex-col items-center justify-center text-gray-400 space-y-4 pb-20">
                 <div class="text-6xl">📂</div>
@@ -160,7 +165,6 @@
         </main>
     </div>
 
-    <!-- 2. 뷰어 화면 (Viewer) -->
     <div id="viewer-screen" class="hidden fixed inset-0 z-50 flex flex-col theme-sepia">
         <div class="absolute top-0 left-0 w-full h-1 bg-current/10 z-50">
             <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-150" style="width: 0%"></div>
@@ -174,7 +178,7 @@
                 <span>나가기</span>
             </button>
             <h2 id="viewer-title" class="text-lg font-bold truncate max-w-[40%] text-center px-4 drop-shadow-md">제목</h2>
-            <button onclick="shareNovel()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="공유하기">
+            <button onclick="shareNovel()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
@@ -183,10 +187,8 @@
 
         <main id="content-container" class="h-full overflow-y-auto px-4 pb-32 pt-16 md:px-0 scroll-smooth">
             <div id="content-inner" class="viewer-content max-w-3xl mx-auto text-lg leading-relaxed outline-none min-h-screen" tabindex="0">
-                <!-- 텍스트 렌더링 영역 -->
-            </div>
+                </div>
             
-            <!-- 다음화/이전화 네비게이션 -->
             <div class="max-w-3xl mx-auto mt-16 mb-20 px-2">
                 <div class="grid grid-cols-2 gap-4">
                     <button id="btn-prev-chap" class="nav-btn" onclick="moveToNeighbor(-1)">
@@ -199,13 +201,31 @@
             </div>
         </main>
 
-        <div class="absolute bottom-6 right-6 z-40">
-            <button onclick="toggleSettings()" class="w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-xl hover:bg-blue-700 transition-transform active:scale-95 hover:rotate-90 duration-300">
-                ⚙️
+        <div class="absolute bottom-6 right-6 z-50 flex flex-col gap-3 items-center">
+            <button onclick="scrollToTop()" class="fab-btn bg-gray-100 text-gray-600 hover:bg-gray-200" title="맨 위로">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+            </button>
+            
+            <button onclick="scrollToBottom()" class="fab-btn bg-gray-100 text-gray-600 hover:bg-gray-200" title="맨 아래로">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+            </button>
+
+            <button id="settings-toggle-btn" onclick="toggleSettings()" class="fab-btn bg-blue-600 text-white hover:bg-blue-700 shadow-lg" title="설정">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform transition-transform duration-300" id="settings-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 absolute opacity-0 transform transition-all duration-300" id="close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
             </button>
         </div>
 
-        <div id="settings-panel" class="absolute bottom-0 left-0 w-full bg-[var(--bg-color)] border-t border-current/10 p-6 z-50 panel-hidden shadow-2xl rounded-t-2xl">
+        <div id="settings-panel" class="absolute bottom-0 left-0 w-full bg-[var(--bg-color)] border-t border-current/10 p-6 z-40 panel-hidden shadow-2xl rounded-t-2xl">
             <div class="max-w-3xl mx-auto space-y-6">
                 <div class="w-12 h-1 bg-current/20 rounded-full mx-auto mb-2 cursor-pointer" onclick="toggleSettings()"></div>
                 <div class="space-y-2">
@@ -242,7 +262,6 @@
         </div>
     </div>
 
-    <!-- P2P 모달 및 기타 모달들 (기존 코드 유지) -->
     <div id="sync-modal" class="fixed inset-0 bg-black/50 z-[65] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto">
             <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">✕</button>
@@ -325,7 +344,6 @@
         </div>
     </div>
 
-    <!-- 파일 업로드, 글쓰기, 컬렉션, 이동 모달 (기존 유지) -->
     <div id="upload-modal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button onclick="closeUploadModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
@@ -386,22 +404,15 @@
         let currentBookData = null;
         let currentCollectionId = null;
         let movingBookId = null;
-        
-        // 정렬 상태 (sortOrder: asc/desc, sortField: lastRead/title)
-        // 기본값: 최근 읽은 순 (Date Desc)
         let currentSort = { field: 'lastRead', order: 'desc' };
-
         let settings = { theme: 'theme-sepia', fontSize: 20, lineHeight: 1.8, fontFamily: 'sans' };
         let peer = null; let conn = null; let html5QrCode = null;
 
         async function init() {
             loadSettings();
             await initDB();
-            
-            // Hash 라우터 초기화 및 리스너 등록
             window.addEventListener('hashchange', handleHashChange);
-            handleHashChange(); // 초기 로드 실행
-
+            handleHashChange();
             document.getElementById('file-input').addEventListener('change', function() {
                 if(this.files[0]) { document.getElementById('selected-filename').textContent = this.files[0].name; document.getElementById('selected-filename').classList.remove('hidden'); }
             });
@@ -413,109 +424,99 @@
             const hash = window.location.hash;
             if (hash.startsWith('#/folder/')) {
                 const id = parseInt(hash.replace('#/folder/', ''));
-                if (!isNaN(id)) {
-                    renderLibrary(id);
-                    document.getElementById('library-screen').classList.remove('hidden');
-                    document.getElementById('viewer-screen').classList.add('hidden');
-                }
+                if (!isNaN(id)) { renderLibrary(id); document.getElementById('library-screen').classList.remove('hidden'); document.getElementById('viewer-screen').classList.add('hidden'); }
             } else if (hash.startsWith('#/read/')) {
                 const id = parseInt(hash.replace('#/read/', ''));
                 if (!isNaN(id)) openBook(id);
             } else {
-                // 루트 (또는 알 수 없는 경로)
-                renderLibrary(null);
-                document.getElementById('library-screen').classList.remove('hidden');
-                document.getElementById('viewer-screen').classList.add('hidden');
+                renderLibrary(null); document.getElementById('library-screen').classList.remove('hidden'); document.getElementById('viewer-screen').classList.add('hidden');
             }
         }
-
         function goToRoot() { window.location.hash = '#/'; }
         function goToFolder(id) { window.location.hash = `#/folder/${id}`; }
         function goToReader(id) { window.location.hash = `#/read/${id}`; }
-        function goBack() { 
-            // 뒤로가기 버튼 클릭 시: 뷰어 -> 목록
-            if(currentCollectionId) goToFolder(currentCollectionId);
-            else goToRoot();
-        }
+        function goBack() { if(currentCollectionId) goToFolder(currentCollectionId); else goToRoot(); }
 
         // --- Sorting Logic ---
-        // 순환: 최근순(기본) -> 제목 오름차순 -> 제목 내림차순 -> 오래된순 -> (다시) 최근순
         function cycleSort() {
             const btn = document.getElementById('sort-label');
-            if (currentSort.field === 'lastRead' && currentSort.order === 'desc') {
-                currentSort = { field: 'title', order: 'asc' };
-                btn.textContent = '제목순 ▲';
-            } else if (currentSort.field === 'title' && currentSort.order === 'asc') {
-                currentSort = { field: 'title', order: 'desc' };
-                btn.textContent = '제목순 ▼';
-            } else if (currentSort.field === 'title' && currentSort.order === 'desc') {
-                currentSort = { field: 'lastRead', order: 'asc' };
-                btn.textContent = '오래된순';
-            } else {
-                currentSort = { field: 'lastRead', order: 'desc' };
-                btn.textContent = '최신순';
-            }
-            // 현재 화면 다시 렌더링
+            if (currentSort.field === 'lastRead' && currentSort.order === 'desc') { currentSort = { field: 'title', order: 'asc' }; btn.textContent = '제목순 ▲'; } 
+            else if (currentSort.field === 'title' && currentSort.order === 'asc') { currentSort = { field: 'title', order: 'desc' }; btn.textContent = '제목순 ▼'; } 
+            else if (currentSort.field === 'title' && currentSort.order === 'desc') { currentSort = { field: 'lastRead', order: 'asc' }; btn.textContent = '오래된순'; } 
+            else { currentSort = { field: 'lastRead', order: 'desc' }; btn.textContent = '최신순'; }
             renderLibrary(currentCollectionId);
         }
-
         async function getSortedBooks(collectionId) {
             const books = await getAllBooks();
-            // 필터링
-            const filtered = books.filter(b => {
-                if(collectionId === null) return !b.collectionId;
-                return b.collectionId === collectionId;
-            });
-
-            // 정렬
+            const filtered = books.filter(b => { if(collectionId === null) return !b.collectionId; return b.collectionId === collectionId; });
             filtered.sort((a, b) => {
                 let valA, valB;
                 if (currentSort.field === 'title') {
-                    valA = a.title.toLowerCase();
-                    valB = b.title.toLowerCase();
-                    if (valA < valB) return currentSort.order === 'asc' ? -1 : 1;
-                    if (valA > valB) return currentSort.order === 'asc' ? 1 : -1;
-                    return 0;
-                } else { // lastRead
-                    valA = new Date(a.lastRead).getTime();
-                    valB = new Date(b.lastRead).getTime();
+                    valA = a.title.toLowerCase(); valB = b.title.toLowerCase();
+                    if (valA < valB) return currentSort.order === 'asc' ? -1 : 1; if (valA > valB) return currentSort.order === 'asc' ? 1 : -1; return 0;
+                } else {
+                    valA = new Date(a.lastRead).getTime(); valB = new Date(b.lastRead).getTime();
                     return currentSort.order === 'asc' ? valA - valB : valB - valA;
                 }
             });
             return filtered;
         }
 
-        // --- Next/Prev Chapter Logic ---
+        // --- Viewer Navigation ---
         async function moveToNeighbor(offset) {
-            // 현재 폴더/루트의 정렬된 책 목록을 가져옴
-            // 주의: 뷰어에 들어올 때의 collectionId를 기억하고 있어야 함 (currentCollectionId 변수 활용)
             const books = await getSortedBooks(currentCollectionId);
             const currentIndex = books.findIndex(b => b.id === currentBookId);
-            
             if (currentIndex === -1) return;
-
             const targetIndex = currentIndex + offset;
             if (targetIndex >= 0 && targetIndex < books.length) {
                 const nextBook = books[targetIndex];
-                // **중요**: 다음화/이전화 이동 시 진행률 0% 초기화
-                // DB 업데이트는 하지 않고(읽던 기록 보존?), 뷰어만 0으로 띄움?
-                // 아니면 "새로 읽기 시작"이므로 DB도 0으로 초기화?
-                // 보통 다음화 넘어가면 처음부터 읽는게 맞으므로 DB 업데이트도 함께 처리
                 await updateBookProgress(nextBook.id, 0, 0); 
-                goToReader(nextBook.id); // URL 변경 -> hashchange -> openBook 호출됨
+                goToReader(nextBook.id);
+            } else { alert(offset > 0 ? '마지막 소설입니다.' : '첫 번째 소설입니다.'); }
+        }
+
+        // --- NEW: Scroll & Settings Toggle Logic ---
+        function scrollToTop() {
+            document.getElementById('content-container').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        function scrollToBottom() {
+            const container = document.getElementById('content-container');
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            const icon = document.getElementById('settings-icon');
+            const closeIcon = document.getElementById('close-icon');
+            const btn = document.getElementById('settings-toggle-btn');
+            
+            const isHidden = panel.classList.contains('panel-hidden');
+            
+            if (isHidden) {
+                panel.classList.remove('panel-hidden');
+                panel.classList.add('panel-visible');
+                // 아이콘 변경 애니메이션
+                icon.classList.add('opacity-0', 'rotate-90');
+                closeIcon.classList.remove('opacity-0');
+                closeIcon.classList.add('rotate-90');
+                btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
             } else {
-                alert(offset > 0 ? '마지막 소설입니다.' : '첫 번째 소설입니다.');
+                panel.classList.add('panel-hidden');
+                panel.classList.remove('panel-visible');
+                // 아이콘 복구
+                icon.classList.remove('opacity-0', 'rotate-90');
+                closeIcon.classList.add('opacity-0');
+                closeIcon.classList.remove('rotate-90');
+                btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
             }
         }
 
         // --- Library Rendering ---
         async function renderLibrary(collectionId = null) {
             currentCollectionId = collectionId;
-            
-            // 데이터 가져오기 (정렬 적용됨)
             const sortedBooks = await getSortedBooks(collectionId);
-            const collections = await getAllCollections(); // 폴더는 정렬 제외 (생성순/이름순 고정 추천하지만 일단 기본)
-
+            const collections = await getAllCollections();
             const grid = document.getElementById('book-grid');
             const emptyState = document.getElementById('empty-state');
             const backBtn = document.getElementById('back-to-root-btn');
@@ -534,7 +535,6 @@
                 backBtn.classList.add('hidden');
             }
 
-            // 폴더 렌더링 (루트일 때만)
             if (collectionId === null) {
                 collections.forEach(col => {
                     const el = document.createElement('div');
@@ -545,7 +545,6 @@
                 });
             }
 
-            // 책 렌더링
             sortedBooks.forEach(book => {
                 const progress = book.progress ? Math.round(book.progress) : 0;
                 const el = document.createElement('div');
@@ -568,13 +567,8 @@
                 grid.appendChild(el);
             });
 
-            if (grid.children.length === 0) {
-                emptyState.classList.remove('hidden');
-                grid.classList.add('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-                grid.classList.remove('hidden');
-            }
+            if (grid.children.length === 0) { emptyState.classList.remove('hidden'); grid.classList.add('hidden'); } 
+            else { emptyState.classList.add('hidden'); grid.classList.remove('hidden'); }
         }
 
         // --- Viewer ---
@@ -582,19 +576,9 @@
             showLoader('로딩 중...');
             const book = await getBook(id);
             if(!book) { hideLoader(); alert('책을 찾을 수 없습니다.'); goToRoot(); return; }
-            
-            currentBookId = id; 
-            currentBookData = book;
-            
-            // 컬렉션 ID 업데이트 (URL로 바로 들어온 경우 대비)
-            if (book.collectionId && !currentCollectionId) {
-                currentCollectionId = book.collectionId; 
-            } else if (!book.collectionId) {
-                // 책은 루트에 있는데, 뷰어는 폴더 상태로 들어온 경우? (URL 조작 등) -> 일단 책의 위치를 우선시하지 않음(목록 문맥 유지)
-                // 하지만 다음화/이전화를 위해서는 현재 책이 속한 리스트를 아는게 중요함.
-                // 여기서는 책 데이터의 collectionId를 믿고 설정.
-                currentCollectionId = book.collectionId || null;
-            }
+            currentBookId = id; currentBookData = book;
+            if (book.collectionId && !currentCollectionId) { currentCollectionId = book.collectionId; } 
+            else if (!book.collectionId) { currentCollectionId = book.collectionId || null; }
 
             document.getElementById('viewer-title').textContent = book.title;
             const frag = document.createDocumentFragment();
@@ -605,20 +589,12 @@
             document.getElementById('viewer-screen').classList.remove('hidden');
             
             applySettings();
-            
-            // 스크롤 복원
-            if(book.scrollTop) {
-                setTimeout(()=> document.getElementById('content-container').scrollTop = book.scrollTop, 50);
-            } else {
-                document.getElementById('content-container').scrollTop = 0;
-            }
-            
-            // 네비게이션 버튼 상태 업데이트 (첫/마지막 체크) - 간단 구현을 위해 항상 표시하되, 끝이면 알림
+            if(book.scrollTop) { setTimeout(()=> document.getElementById('content-container').scrollTop = book.scrollTop, 50); } 
+            else { document.getElementById('content-container').scrollTop = 0; }
             hideLoader();
         }
 
-        // --- DB Helpers & Initialization (Standard) ---
-        // (기존 코드와 동일하지만 initDB만 수정 없음)
+        // --- DB & Common Utils ---
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -627,19 +603,16 @@
                     const db = e.target.result;
                     if (!db.objectStoreNames.contains('books')) {
                         const store = db.createObjectStore('books', { keyPath: 'id', autoIncrement: true });
-                        store.createIndex('lastRead', 'lastRead', { unique: false });
-                        store.createIndex('title', 'title', { unique: false });
+                        store.createIndex('lastRead', 'lastRead', { unique: false }); store.createIndex('title', 'title', { unique: false });
                     }
                     if (!db.objectStoreNames.contains('collections')) {
-                        const store = db.createObjectStore('collections', { keyPath: 'id', autoIncrement: true });
-                        store.createIndex('name', 'name', { unique: false });
+                        const store = db.createObjectStore('collections', { keyPath: 'id', autoIncrement: true }); store.createIndex('name', 'name', { unique: false });
                     }
                 };
                 request.onsuccess = (e) => { db = e.target.result; resolve(db); };
             });
         }
         function getAllCollections() { return new Promise(r=>{const t=db.transaction(['collections'],'readonly'); t.objectStore('collections').getAll().onsuccess=e=>r(e.target.result)}); }
-        function getCollection(id) { return new Promise(r=>{const t=db.transaction(['collections'],'readonly'); t.objectStore('collections').get(id).onsuccess=e=>r(e.target.result)}); }
         function addCollection(n) { return new Promise(r=>{const t=db.transaction(['collections'],'readwrite'); t.objectStore('collections').add({name:n,created:new Date()}).onsuccess=()=>r()}); }
         function saveBookToDB(t,c,cid=null) { return new Promise(r=>{const tx=db.transaction(['books'],'readwrite'); tx.objectStore('books').add({title:t.replace('.txt',''),content:c,progress:0,lastRead:new Date(),coverId:Math.floor(Math.random()*5)+1,collectionId:cid}).onsuccess=e=>r(e.target.result)}); }
         function getAllBooks() { return new Promise(r=>{const t=db.transaction(['books'],'readonly'); t.objectStore('books').getAll().onsuccess=e=>r(e.target.result)}); }
@@ -648,7 +621,6 @@
         function updateBookCollection(bid, cid) { const t=db.transaction(['books'],'readwrite'); const s=t.objectStore('books'); s.get(bid).onsuccess=e=>{const d=e.target.result; if(d){d.collectionId=cid; s.put(d);}}; return new Promise(r=>t.oncomplete=r); }
         function updateBookProgress(id, st, p) { return new Promise(r => { const t=db.transaction(['books'],'readwrite'); const s=t.objectStore('books'); s.get(id).onsuccess=e=>{const d=e.target.result; if(d){d.scrollTop=st; d.progress=p; d.lastRead=new Date(); s.put(d);} r();}; }); }
 
-        // --- Common UI Functions ---
         function toggleCardMenu(e, id) { e.stopPropagation(); document.querySelectorAll('[id^="menu-"]').forEach(el=>{if(el.id!==`menu-${id}`)el.classList.add('hidden')}); const m=document.getElementById(`menu-${id}`); m.classList.toggle('hidden'); const c=()=>{m.classList.add('hidden');document.removeEventListener('click',c)}; setTimeout(()=>document.addEventListener('click',c),0); }
         function openCreateCollectionModal() { document.getElementById('create-collection-modal').classList.remove('hidden'); document.getElementById('new-collection-name').focus(); }
         function closeCreateCollectionModal() { document.getElementById('create-collection-modal').classList.add('hidden'); document.getElementById('new-collection-name').value=''; }
@@ -662,46 +634,3 @@
         function closeWriteModal() { document.getElementById('write-modal').classList.add('hidden'); }
         async function processUpload() { const f=document.getElementById('file-input').files[0]; if(!f){alert('파일 선택');return;} closeUploadModal(); showLoader('저장 중...'); const enc=document.getElementById('encoding-select').value; const r=new FileReader(); r.onload=async(e)=>{try{await saveBookToDB(f.name, e.target.result, currentCollectionId); renderLibrary(currentCollectionId); hideLoader();}catch(err){alert('실패:'+err);hideLoader();}}; r.readAsText(f, enc); }
         async function saveWrittenNovel() { const t=document.getElementById('write-title').value.trim(); const c=document.getElementById('write-content').value; if(!t||!c)return alert('내용 입력'); closeWriteModal(); showLoader('저장 중...'); try{await saveBookToDB(t,c,currentCollectionId); renderLibrary(currentCollectionId); hideLoader();}catch(e){alert('실패:'+e);hideLoader();} }
-        async function confirmDelete(e, id) { e.stopPropagation(); if(confirm('삭제하시겠습니까?')){await deleteBook(id); renderLibrary(currentCollectionId);} }
-        async function downloadBook(e, id) { e.stopPropagation(); const b=await getBook(id); if(!b)return; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([b.content],{type:'text/plain'})); a.download=`${b.title}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-        
-        // P2P & Backup (Keeping existing functions)
-        function openSyncModal(){document.getElementById('sync-modal').classList.remove('hidden');resetSyncView();}
-        function closeSyncModal(){document.getElementById('sync-modal').classList.add('hidden');cleanupPeer();stopScanner();}
-        function resetSyncView(){document.getElementById('sync-main-view').classList.remove('hidden');document.getElementById('sync-host-view').classList.add('hidden');document.getElementById('sync-client-view').classList.add('hidden');updateSyncStatus('',false);document.getElementById('host-code-display').textContent='-----';document.getElementById('qrcode-container').innerHTML='';document.getElementById('target-peer-id').value='';cleanupPeer();stopScanner();}
-        function cleanupPeer(){if(conn){conn.close();conn=null;}if(peer){peer.destroy();peer=null;}}
-        function updateSyncStatus(m,s){const el=document.getElementById('sync-status');document.getElementById('sync-status-text').textContent=m;if(s)el.classList.remove('hidden');else el.classList.add('hidden');}
-        function generateShortId(){return Math.floor(10000+Math.random()*90000).toString();}
-        function startHostMode(){document.getElementById('sync-main-view').classList.add('hidden');document.getElementById('sync-host-view').classList.remove('hidden');updateSyncStatus('코드 생성 중...',true);peer=new Peer(generateShortId());peer.on('open',(id)=>{document.getElementById('host-code-display').textContent=id;updateSyncStatus('대기 중...',true);document.getElementById('qrcode-container').innerHTML='';new QRCode(document.getElementById('qrcode-container'),{text:id,width:160,height:160});});peer.on('connection',(c)=>{conn=c;updateSyncStatus('연결됨! 전송 준비...',true);conn.on('open',async()=>{updateSyncStatus('전송 중...',true);const d=await getExportData();conn.send(d);updateSyncStatus('전송 완료!',true);});});peer.on('error',()=>{cleanupPeer();startHostMode();});}
-        function startClientMode(){document.getElementById('sync-main-view').classList.add('hidden');document.getElementById('sync-client-view').classList.remove('hidden');updateSyncStatus('',false);peer=new Peer();peer.on('error',e=>alert('오류:'+e.type));}
-        function startScanner(){document.getElementById('manual-input-container').classList.add('hidden');document.getElementById('qr-reader-container').classList.remove('hidden');html5QrCode=new Html5Qrcode("reader");html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},(t)=>{stopScanner();document.getElementById('target-peer-id').value=t;connectToPeer();});}
-        function stopScanner(){if(html5QrCode)html5QrCode.stop().then(()=>{html5QrCode.clear();html5QrCode=null;}).catch(()=>{});document.getElementById('qr-reader-container').classList.add('hidden');document.getElementById('manual-input-container').classList.remove('hidden');}
-        function connectToPeer(){const id=document.getElementById('target-peer-id').value.trim();if(!id)return alert('코드 입력');updateSyncStatus('연결 시도...',true);conn=peer.connect(id);conn.on('open',()=>updateSyncStatus('연결 성공! 수신 대기...',true));conn.on('data',async(d)=>{updateSyncStatus('수신 중...',true);try{const r=await importData(d);updateSyncStatus('완료!',true);alert(`완료! 추가:${r.added}, 중복:${r.skipped}`);closeSyncModal();renderLibrary(currentCollectionId);}catch(e){alert('실패:'+e);}});setTimeout(()=>{if(!conn||!conn.open)updateSyncStatus('시간 초과',true);},8000);}
-        async function exportAllData(){try{showLoader('생성 중...');const d=await getExportData();const b=new Blob([JSON.stringify(d)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`library_backup.json`;document.body.appendChild(a);a.click();document.body.removeChild(a);hideLoader();closeSyncModal();}catch(e){hideLoader();alert('실패:'+e);}}
-        async function importFromFile(i){const f=i.files[0];if(!f)return;if(!confirm('복원하시겠습니까? 중복은 건너뜁니다.')){i.value='';return;}showLoader('분석 중...');const r=new FileReader();r.onload=async(e)=>{try{const d=JSON.parse(e.target.result);const res=await importData(d);hideLoader();alert(`완료! 추가:${res.added}, 중복:${res.skipped}`);closeSyncModal();renderLibrary(currentCollectionId);}catch(err){hideLoader();alert('실패:'+err);}};r.readAsText(f);}
-        async function getExportData(){const b=await getAllBooks();const c=await getAllCollections();return{version:2,books:b,collections:c,settings:settings};}
-        async function importData(d){if(!d.books)throw new Error("Invalid");const mc=await getAllCollections();const mb=await getAllBooks();const cm={};const tx=db.transaction(['books','collections'],'readwrite');const cs=tx.objectStore('collections');const bs=tx.objectStore('books');if(d.collections){for(const c of d.collections){const ex=mc.find(m=>m.name===c.name);if(ex)cm[c.id]=ex.id;else{const {id,...r}=c;const ni=await new Promise(z=>{cs.add(r).onsuccess=e=>z(e.target.result)});cm[c.id]=ni;mc.push({...r,id:ni});}}}let ac=0,sc=0;for(const b of d.books){const ex=mb.find(m=>m.title===b.title);if(ex){sc++;continue;}const{id,collectionId,...r}=b;if(collectionId&&cm[collectionId])r.collectionId=cm[collectionId];else r.collectionId=null;bs.add(r);ac++;}if(d.settings){settings=d.settings;saveSettings();}return{added:ac,skipped:sc};}
-
-        // --- Settings & Utils ---
-        function showLoader(m){document.getElementById('loader-text').textContent=m;document.getElementById('loader-overlay').classList.remove('hidden');}
-        function hideLoader(){document.getElementById('loader-overlay').classList.add('hidden');}
-        function throttle(f,l){let t;return function(){if(!t){f.apply(this,arguments);t=true;setTimeout(()=>t=false,l);}}}
-        function toggleSettings(){const p=document.getElementById('settings-panel');p.classList.toggle('panel-hidden');p.classList.toggle('panel-visible');}
-        function setTheme(t){const v=document.getElementById('viewer-screen');v.className=v.className.replace(/theme-\w+/,'').trim()+' '+t;settings.theme=t;saveSettings();}
-        function setFont(t){settings.fontFamily=t;const ci=document.getElementById('content-inner');if(t==='sans'){ci.classList.remove('font-serif-kr');ci.classList.add('font-sans-kr');}else{ci.classList.remove('font-sans-kr');ci.classList.add('font-serif-kr');}saveSettings();}
-        function adjustSize(d){settings.fontSize=Math.max(12,Math.min(40,settings.fontSize+d));applyStyleUpdates();saveSettings();}
-        function adjustLineHeight(d){settings.lineHeight=Math.round((Math.max(1.2,Math.min(3.0,settings.lineHeight+d)))*10)/10;applyStyleUpdates();saveSettings();}
-        function applyStyleUpdates(){const ci=document.getElementById('content-inner');ci.style.fontSize=`${settings.fontSize}px`;ci.style.lineHeight=settings.lineHeight;}
-        function applySettings(){setTheme(settings.theme);setFont(settings.fontFamily);applyStyleUpdates();}
-        function saveSettings(){localStorage.setItem('webNovelReaderSettings',JSON.stringify(settings));}
-        function loadSettings(){const s=localStorage.getItem('webNovelReaderSettings');if(s)settings={...settings,...JSON.parse(s)};}
-        function updateProgress(){const c=document.getElementById('content-container');const p=(c.scrollTop/(c.scrollHeight-c.clientHeight))*100||0;document.getElementById('progress-bar').style.width=`${p}%`;return{scrollTop:c.scrollTop,percent:p};}
-        function saveScrollPosition(){if(currentBookId){const{scrollTop,percent}=updateProgress();updateBookProgress(currentBookId,scrollTop,percent);}}
-        async function shareNovel(){if(!currentBookData)return;const d={title:currentBookData.title,text:currentBookData.content.substring(0,5000)};if(navigator.share)try{await navigator.share(d)}catch(e){}else try{await navigator.clipboard.writeText(currentBookData.content);alert('복사됨');}catch(e){}}
-
-        init();
-    </script>
-</body>
-</html>
-
-
