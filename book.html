@@ -194,8 +194,7 @@
             <div class="p-4 border-b border-current/10 flex justify-between items-center bg-[var(--bg-color)]">
                 <h3 class="font-bold text-lg opacity-80">목차</h3>
                 <div class="flex items-center gap-2">
-                    <!-- 목차 자동 분석 버튼 (NEW) -->
-                    <button onclick="openAutoTOCModal()" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="목차 자동 분석">
+                    <button onclick="openAutoTOCModal()" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="목차 자동 분석 (전체 스캔)">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                         </svg>
@@ -214,16 +213,12 @@
             <div id="toc-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
         </aside>
 
-        <!-- 목차 편집 모달 (NEW) -->
+        <!-- 목차 편집 모달 -->
         <div id="toc-edit-modal" class="fixed inset-0 bg-black/50 z-[80] hidden flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[85vh]">
                 <h3 class="text-xl font-bold mb-2 text-gray-800">목차 자동 분석 프리뷰</h3>
                 <p class="text-xs text-gray-500 mb-4">자동 감지된 목차입니다. 수정하거나 삭제한 후 적용하세요.</p>
-                
-                <div id="toc-preview-list" class="flex-1 overflow-y-auto space-y-2 mb-4 border rounded p-2 bg-gray-50">
-                    <!-- Preview Items -->
-                </div>
-
+                <div id="toc-preview-list" class="flex-1 overflow-y-auto space-y-2 mb-4 border rounded p-2 bg-gray-50"></div>
                 <div class="flex justify-end gap-3 pt-2 border-t">
                     <button onclick="closeAutoTOCModal()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">취소</button>
                     <button onclick="applyAutoTOC()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-bold">최종 적용</button>
@@ -376,7 +371,7 @@
         let settings = { theme: 'theme-sepia', fontSize: 20, lineHeight: 1.8, fontFamily: 'sans' };
         let peer = null; let conn = null; let html5QrCode = null;
         let bookTOC = []; 
-        let tempTOC = []; // For Preview
+        let tempTOC = []; 
 
         async function init() {
             loadSettings();
@@ -394,12 +389,11 @@
             });
         }
 
-        // --- 목차 관리 (Updated) ---
-        // 1. 소설 로드 시 실행되는 자동 생성 (최소한의 패턴)
+        // --- 목차 관리 ---
         function generateBasicTOC(text) {
             const lines = text.split(/\r?\n/);
             const toc = [];
-            const mergePattern = /^={5,}\s+(.+?)\s+={5,}$/; // 합본 구분자만
+            const mergePattern = /^={5,}\s+(.+?)\s+={5,}$/; // 합본 구분자만 자동 인식
 
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
@@ -412,11 +406,9 @@
             return toc;
         }
 
-        // 2. 버튼 클릭 시 실행되는 강력한 자동 생성
         function detectFullTOC(text) {
             const lines = text.split(/\r?\n/);
             const toc = [];
-            // 다양한 챕터 패턴
             const patterns = [
                 /^={5,}\s+(.+?)\s+={5,}$/,
                 /^(제|第)\s?(\d+)\s?(화|장|막)/,
@@ -429,11 +421,10 @@
 
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
-                if (!trimmed || trimmed.length > 50) return; // 제목 길이 제한
-
+                if (!trimmed || trimmed.length > 50) return;
                 for (let pattern of patterns) {
                     if (pattern.test(trimmed)) {
-                        let title = trimmed.replace(/^={5,}\s+|={5,}$/g, ''); // 합본 기호 제거
+                        let title = trimmed.replace(/^={5,}\s+|={5,}$/g, '');
                         toc.push({ title: title, lineIndex: index });
                         break;
                     }
@@ -442,12 +433,9 @@
             return toc;
         }
 
-        // --- 목차 프리뷰 UI ---
         function openAutoTOCModal() {
             if(!currentBookData) return;
             showLoader('분석 중...');
-            
-            // UI 렌더링 지연을 위해 setTimeout 사용
             setTimeout(() => {
                 tempTOC = detectFullTOC(currentBookData.content);
                 hideLoader();
@@ -456,84 +444,48 @@
             }, 100);
         }
 
-        function closeAutoTOCModal() {
-            document.getElementById('toc-edit-modal').classList.add('hidden');
-            tempTOC = [];
-        }
+        function closeAutoTOCModal() { document.getElementById('toc-edit-modal').classList.add('hidden'); tempTOC = []; }
 
         function renderTOCPreview() {
             const list = document.getElementById('toc-preview-list');
             list.innerHTML = '';
-            
-            if(tempTOC.length === 0) {
-                list.innerHTML = '<div class="p-4 text-center text-sm opacity-50">감지된 챕터가 없습니다.</div>';
-                return;
-            }
-
+            if(tempTOC.length === 0) { list.innerHTML = '<div class="p-4 text-center text-sm opacity-50">감지된 챕터가 없습니다.</div>'; return; }
             tempTOC.forEach((item, idx) => {
                 const row = document.createElement('div');
                 row.className = 'flex items-center gap-2 p-2 border-b border-gray-100 hover:bg-gray-50';
-                
                 const input = document.createElement('input');
-                input.type = 'text';
-                input.value = item.title;
+                input.type = 'text'; input.value = item.title;
                 input.className = 'flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none';
                 input.onchange = (e) => { tempTOC[idx].title = e.target.value; };
-
                 const delBtn = document.createElement('button');
-                delBtn.className = 'text-red-400 hover:text-red-600 px-2';
-                delBtn.innerHTML = '🗑️';
-                delBtn.onclick = () => {
-                    tempTOC.splice(idx, 1);
-                    renderTOCPreview();
-                };
-
-                row.appendChild(input);
-                row.appendChild(delBtn);
-                list.appendChild(row);
+                delBtn.className = 'text-red-400 hover:text-red-600 px-2'; delBtn.innerHTML = '🗑️';
+                delBtn.onclick = () => { tempTOC.splice(idx, 1); renderTOCPreview(); };
+                row.appendChild(input); row.appendChild(delBtn); list.appendChild(row);
             });
         }
 
         function applyAutoTOC() {
             if(!confirm('기존 목차를 덮어쓰고 적용하시겠습니까?')) return;
-            
-            bookTOC = [...tempTOC]; // 복사
+            bookTOC = [...tempTOC];
             saveBookTOC(currentBookId, bookTOC);
-            
-            // 뷰어 리프레시 (앵커 태그 다시 심기 위해)
-            // 현재 스크롤 위치 저장
+            // 뷰어 리프레시 (스크롤 유지)
             const savedScroll = document.getElementById('content-container').scrollTop;
-            openBook(currentBookId).then(() => {
-                setTimeout(() => {
-                    document.getElementById('content-container').scrollTop = savedScroll;
-                }, 100);
-            });
-            
-            closeAutoTOCModal();
-            renderTOC(); // 사이드바 갱신
+            openBook(currentBookId).then(() => { setTimeout(() => { document.getElementById('content-container').scrollTop = savedScroll; }, 100); });
+            closeAutoTOCModal(); renderTOC();
         }
 
-        // --- Existing TOC Functions ---
         function toggleTOC() {
             const sidebar = document.getElementById('toc-sidebar');
             const dim = document.getElementById('toc-dim');
             const isHidden = sidebar.classList.contains('toc-hidden');
-            if (isHidden) {
-                sidebar.classList.remove('toc-hidden'); sidebar.classList.add('toc-visible');
-                dim.classList.remove('hidden'); setTimeout(()=>dim.classList.remove('opacity-0'), 10);
-            } else {
-                sidebar.classList.add('toc-hidden'); sidebar.classList.remove('toc-visible');
-                dim.classList.add('opacity-0'); setTimeout(()=>dim.classList.add('hidden'), 300);
-            }
+            if (isHidden) { sidebar.classList.remove('toc-hidden'); sidebar.classList.add('toc-visible'); dim.classList.remove('hidden'); setTimeout(()=>dim.classList.remove('opacity-0'), 10); } 
+            else { sidebar.classList.add('toc-hidden'); sidebar.classList.remove('toc-visible'); dim.classList.add('opacity-0'); setTimeout(()=>dim.classList.add('hidden'), 300); }
         }
 
         function renderTOC() {
             const list = document.getElementById('toc-list');
             list.innerHTML = '';
-            if (bookTOC.length === 0) {
-                list.innerHTML = '<div class="p-4 text-center text-sm opacity-50">목차가 없습니다.<br>상단 버튼으로 자동 분석하거나<br>직접 추가해보세요.</div>';
-                return;
-            }
+            if (bookTOC.length === 0) { list.innerHTML = '<div class="p-4 text-center text-sm opacity-50">목차가 없습니다.<br>상단 버튼으로 자동 분석하거나<br>직접 추가해보세요.</div>'; return; }
             bookTOC.forEach((chapter, idx) => {
                 const item = document.createElement('div');
                 item.className = 'flex justify-between items-center p-3 hover:bg-current/5 cursor-pointer text-sm border-b border-current/5 transition-colors group';
@@ -609,7 +561,6 @@
 
             document.getElementById('viewer-title').textContent = book.title;
             
-            // TOC 로드: 저장된 것 우선, 없으면 기본(합본) 생성
             if (book.toc && book.toc.length > 0) {
                 bookTOC = book.toc;
             } else {
@@ -641,7 +592,7 @@
             hideLoader();
         }
 
-        // --- Download (Merge) ---
+        // --- Download ---
         function toggleDownloadMenu() { document.getElementById('download-menu').classList.toggle('hidden'); }
         async function downloadAsZip() {
             toggleDownloadMenu(); showLoader('압축 중...');
@@ -649,7 +600,8 @@
                 const books = await getSortedBooks(currentCollectionId);
                 if (books.length === 0) throw new Error("책 없음");
                 const zip = new JSZip();
-                const folderName = currentCollectionId ? (await getCollection(currentCollectionId)).name : "WebNovel_Library";
+                let folderName = "WebNovel_Library";
+                if(currentCollectionId) { const col = await getCollection(currentCollectionId); if(col) folderName = col.name; }
                 const usedNames = {};
                 books.forEach(book => {
                     let fn = book.title.replace(/[\\/:*?"<>|]/g, "_");
@@ -665,7 +617,8 @@
             try {
                 const books = await getSortedBooks(currentCollectionId);
                 if (books.length === 0) throw new Error("책 없음");
-                const folderName = currentCollectionId ? (await getCollection(currentCollectionId)).name : "WebNovel_Merged";
+                let folderName = "WebNovel_Merged";
+                if(currentCollectionId) { const col = await getCollection(currentCollectionId); if(col) folderName = col.name; }
                 let mergedContent = "";
                 books.forEach(book => {
                     mergedContent += `\n\n========== ${book.title} ==========\n\n`;
@@ -746,6 +699,7 @@
         function deleteBook(id){return new Promise(r=>{db.transaction(['books'],'readwrite').objectStore('books').delete(id).onsuccess=()=>r()})}
         function updateBookCollection(bid,cid){const t=db.transaction(['books'],'readwrite');const s=t.objectStore('books');s.get(bid).onsuccess=e=>{const d=e.target.result;if(d){d.collectionId=cid;s.put(d)}};return new Promise(r=>t.oncomplete=r)}
         function updateBookProgress(id,st,p){return new Promise(r=>{const t=db.transaction(['books'],'readwrite');const s=t.objectStore('books');s.get(id).onsuccess=e=>{const d=e.target.result;if(d){d.scrollTop=st;d.progress=p;d.lastRead=new Date();s.put(d)}r()}})}
+        function getCollection(id){return new Promise(r=>{const t=db.transaction(['collections'],'readonly');t.objectStore('collections').get(id).onsuccess=e=>r(e.target.result)})}
         function toggleCardMenu(e,id){e.stopPropagation();document.querySelectorAll('[id^="menu-"]').forEach(el=>{if(el.id!==`menu-${id}`)el.classList.add('hidden')});const m=document.getElementById(`menu-${id}`);m.classList.toggle('hidden');const c=()=>{m.classList.add('hidden');document.removeEventListener('click',c)};setTimeout(()=>document.addEventListener('click',c),0)}
         function openCreateCollectionModal(){document.getElementById('create-collection-modal').classList.remove('hidden');document.getElementById('new-collection-name').focus()}
         function closeCreateCollectionModal(){document.getElementById('create-collection-modal').classList.add('hidden');document.getElementById('new-collection-name').value=''}
