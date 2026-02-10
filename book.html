@@ -3,11 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>웹소설 리더</title>
+    <title>웹소설 리더 - 내 서재</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- P2P 및 QR 관련 -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <!-- 압축 및 파일 저장 라이브러리 (NEW) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -20,14 +26,14 @@
         .font-sans-kr { font-family: 'Noto Sans KR', sans-serif; }
         .font-serif-kr { font-family: 'Noto Serif KR', serif; }
 
-        /* --- 테마 정의 --- */
+        /* 테마 정의 */
         .theme-white { --bg-color: #ffffff; --text-color: #111827; }
         .theme-sepia { --bg-color: #f6f1e3; --text-color: #5f4b32; } 
         .theme-dark { --bg-color: #374151; --text-color: #e5e7eb; }
         .theme-mint { --bg-color: #e0f2f1; --text-color: #004d40; }
         .theme-black { --bg-color: #000000; --text-color: #9ca3af; }
 
-        /* --- 뷰어 화면 스타일 --- */
+        /* 뷰어 화면 스타일 */
         #viewer-screen {
             background-color: var(--bg-color) !important;
             color: var(--text-color) !important;
@@ -73,6 +79,7 @@
         #reader { width: 100%; border-radius: 0.5rem; overflow: hidden; }
         .code-input { letter-spacing: 0.5em; text-align: center; font-size: 1.5rem; font-family: monospace; }
         
+        /* 네비게이션 버튼 스타일 */
         .nav-btn {
             background-color: rgba(0,0,0,0.05);
             padding: 1rem;
@@ -99,6 +106,7 @@
 </head>
 <body class="bg-gray-50 h-screen flex flex-col font-sans-kr overflow-hidden text-gray-800 touch-pan-y">
 
+    <!-- 1. 서재 화면 (Library) -->
     <div id="library-screen" class="flex-1 flex flex-col h-full bg-gray-50 text-gray-800 overflow-hidden">
         <header class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm z-10 gap-4">
             <div class="flex items-center justify-between w-full md:w-auto gap-4">
@@ -114,11 +122,13 @@
                     </div>
                     
                     <div class="flex items-center gap-1 ml-2">
+                        <!-- 데이터 동기화 -->
                         <button onclick="openSyncModal()" class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="데이터 관리">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                             </svg>
                         </button>
+                        <!-- 폴더 추가 -->
                         <button onclick="openCreateCollectionModal()" class="text-gray-400 hover:text-yellow-500 transition-colors p-2 rounded-full hover:bg-gray-100" title="새 폴더 만들기">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -129,6 +139,24 @@
             </div>
             
             <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+                <!-- 다운로드 메뉴 버튼 (NEW) -->
+                <div class="relative">
+                    <button onclick="toggleDownloadMenu()" class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition-colors" title="내보내기">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                    </button>
+                    <div id="download-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30 py-1">
+                        <button onclick="downloadAsZip()" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                            <span class="text-blue-500">📦</span> 일괄 다운로드 (ZIP)
+                        </button>
+                        <button onclick="downloadAsMerged()" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                            <span class="text-green-500">📑</span> 하나로 합치기 (TXT)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 정렬 버튼 -->
                 <button onclick="cycleSort()" id="sort-btn" class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
@@ -155,7 +183,8 @@
 
         <main class="flex-1 overflow-y-auto p-6" id="library-container">
             <div id="book-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
-                </div>
+                <!-- 폴더와 책 카드들이 여기에 동적으로 추가됨 -->
+            </div>
             
             <div id="empty-state" class="hidden h-full flex flex-col items-center justify-center text-gray-400 space-y-4 pb-20">
                 <div class="text-6xl">📂</div>
@@ -165,6 +194,7 @@
         </main>
     </div>
 
+    <!-- 2. 뷰어 화면 (Viewer) -->
     <div id="viewer-screen" class="hidden fixed inset-0 z-50 flex flex-col theme-sepia">
         <div class="absolute top-0 left-0 w-full h-1 bg-current/10 z-50">
             <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-150" style="width: 0%"></div>
@@ -187,7 +217,8 @@
 
         <main id="content-container" class="h-full overflow-y-auto px-4 pb-32 pt-16 md:px-0 scroll-smooth">
             <div id="content-inner" class="viewer-content max-w-3xl mx-auto text-lg leading-relaxed outline-none min-h-screen" tabindex="0">
-                </div>
+                <!-- 텍스트 렌더링 영역 -->
+            </div>
             
             <div class="max-w-3xl mx-auto mt-16 mb-20 px-2">
                 <div class="grid grid-cols-2 gap-4">
@@ -201,19 +232,18 @@
             </div>
         </main>
 
+        <!-- 플로팅 액션 버튼 그룹 -->
         <div class="absolute bottom-6 right-6 z-50 flex flex-col gap-3 items-center">
             <button onclick="scrollToTop()" class="fab-btn bg-gray-100 text-gray-600 hover:bg-gray-200" title="맨 위로">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
             </button>
-            
             <button onclick="scrollToBottom()" class="fab-btn bg-gray-100 text-gray-600 hover:bg-gray-200" title="맨 아래로">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                 </svg>
             </button>
-
             <button id="settings-toggle-btn" onclick="toggleSettings()" class="fab-btn bg-blue-600 text-white hover:bg-blue-700 shadow-lg" title="설정">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform transition-transform duration-300" id="settings-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -262,6 +292,7 @@
         </div>
     </div>
 
+    <!-- P2P 모달 및 기타 모달들 (기존 유지) -->
     <div id="sync-modal" class="fixed inset-0 bg-black/50 z-[65] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto">
             <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">✕</button>
@@ -344,6 +375,7 @@
         </div>
     </div>
 
+    <!-- 파일 업로드, 글쓰기, 컬렉션, 이동 모달 (기존 유지) -->
     <div id="upload-modal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button onclick="closeUploadModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
@@ -417,6 +449,14 @@
                 if(this.files[0]) { document.getElementById('selected-filename').textContent = this.files[0].name; document.getElementById('selected-filename').classList.remove('hidden'); }
             });
             document.getElementById('content-container').addEventListener('scroll', throttle(() => { updateProgress(); if(currentBookId) saveScrollPosition(); }, 1000));
+            // 다운로드 메뉴 닫기 (외부 클릭 감지)
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('download-menu');
+                const btn = document.querySelector('button[onclick="toggleDownloadMenu()"]');
+                if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
         }
 
         // --- Router Logic ---
@@ -437,7 +477,68 @@
         function goToReader(id) { window.location.hash = `#/read/${id}`; }
         function goBack() { if(currentCollectionId) goToFolder(currentCollectionId); else goToRoot(); }
 
-        // --- Sorting Logic ---
+        // --- Sorting & Download Logic (NEW) ---
+        function toggleDownloadMenu() {
+            document.getElementById('download-menu').classList.toggle('hidden');
+        }
+
+        async function downloadAsZip() {
+            toggleDownloadMenu();
+            showLoader('압축 중...');
+            try {
+                const books = await getSortedBooks(currentCollectionId);
+                if (books.length === 0) { throw new Error("다운로드할 책이 없습니다."); }
+
+                const zip = new JSZip();
+                const folderName = currentCollectionId ? (await getCollection(currentCollectionId)).name : "WebNovel_Library";
+                
+                // 파일명 중복 처리
+                const usedNames = {};
+                books.forEach(book => {
+                    let filename = book.title.replace(/[\\/:*?"<>|]/g, "_"); // 안전한 파일명
+                    if (usedNames[filename]) {
+                        usedNames[filename]++;
+                        filename = `${filename} (${usedNames[filename]})`;
+                    } else {
+                        usedNames[filename] = 1;
+                    }
+                    zip.file(`${filename}.txt`, book.content);
+                });
+
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, `${folderName}.zip`);
+                hideLoader();
+            } catch (e) {
+                hideLoader();
+                alert(e.message || '다운로드 실패');
+            }
+        }
+
+        async function downloadAsMerged() {
+            toggleDownloadMenu();
+            showLoader('합치는 중...');
+            try {
+                const books = await getSortedBooks(currentCollectionId);
+                if (books.length === 0) { throw new Error("합칠 책이 없습니다."); }
+
+                const folderName = currentCollectionId ? (await getCollection(currentCollectionId)).name : "WebNovel_Merged";
+                let mergedContent = "";
+
+                books.forEach(book => {
+                    mergedContent += `\n\n========== ${book.title} ==========\n\n`;
+                    mergedContent += book.content;
+                    mergedContent += "\n";
+                });
+
+                const blob = new Blob([mergedContent], { type: "text/plain;charset=utf-8" });
+                saveAs(blob, `${folderName}_합본.txt`);
+                hideLoader();
+            } catch (e) {
+                hideLoader();
+                alert(e.message || '실패');
+            }
+        }
+
         function cycleSort() {
             const btn = document.getElementById('sort-label');
             if (currentSort.field === 'lastRead' && currentSort.order === 'desc') { currentSort = { field: 'title', order: 'asc' }; btn.textContent = '제목순 ▲'; } 
@@ -475,7 +576,7 @@
             } else { alert(offset > 0 ? '마지막 소설입니다.' : '첫 번째 소설입니다.'); }
         }
 
-        // --- NEW: Scroll & Settings Toggle Logic ---
+        // --- Scroll & Settings Toggle Logic ---
         function scrollToTop() {
             document.getElementById('content-container').scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -494,7 +595,6 @@
             if (isHidden) {
                 panel.classList.remove('panel-hidden');
                 panel.classList.add('panel-visible');
-                // 아이콘 변경 애니메이션
                 icon.classList.add('opacity-0', 'rotate-90');
                 closeIcon.classList.remove('opacity-0');
                 closeIcon.classList.add('rotate-90');
@@ -503,7 +603,6 @@
             } else {
                 panel.classList.add('panel-hidden');
                 panel.classList.remove('panel-visible');
-                // 아이콘 복구
                 icon.classList.remove('opacity-0', 'rotate-90');
                 closeIcon.classList.add('opacity-0');
                 closeIcon.classList.remove('rotate-90');
@@ -613,6 +712,7 @@
             });
         }
         function getAllCollections() { return new Promise(r=>{const t=db.transaction(['collections'],'readonly'); t.objectStore('collections').getAll().onsuccess=e=>r(e.target.result)}); }
+        function getCollection(id) { return new Promise(r=>{const t=db.transaction(['collections'],'readonly'); t.objectStore('collections').get(id).onsuccess=e=>r(e.target.result)}); }
         function addCollection(n) { return new Promise(r=>{const t=db.transaction(['collections'],'readwrite'); t.objectStore('collections').add({name:n,created:new Date()}).onsuccess=()=>r()}); }
         function saveBookToDB(t,c,cid=null) { return new Promise(r=>{const tx=db.transaction(['books'],'readwrite'); tx.objectStore('books').add({title:t.replace('.txt',''),content:c,progress:0,lastRead:new Date(),coverId:Math.floor(Math.random()*5)+1,collectionId:cid}).onsuccess=e=>r(e.target.result)}); }
         function getAllBooks() { return new Promise(r=>{const t=db.transaction(['books'],'readonly'); t.objectStore('books').getAll().onsuccess=e=>r(e.target.result)}); }
@@ -674,3 +774,5 @@
     </script>
 </body>
 </html>
+
+
