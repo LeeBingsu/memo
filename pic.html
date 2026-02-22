@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>다중 이미지 압축 및 변환기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 다중 파일 ZIP 다운로드를 위한 JSZip 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border-radius: 1rem; border: 1px solid #e2e8f0; }
+        .drag-active { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
+        
+        /* Custom Range Slider */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #3b82f6; cursor: pointer; margin-top: -7px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
+        input[type=range]:focus { outline: none; }
+        
+        /* Scrollbar for file list */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 p-4 md:p-8">
+
+<div class="max-w-5xl mx-auto space-y-6">
+    <!-- Header -->
+    <header class="text-center space-y-2 mb-8">
+        <h1 class="text-3xl font-bold text-slate-900"><i class="fa-solid fa-images text-blue-500 mr-2"></i>다중 이미지 압축 & 변환기</h1>
+        <p class="text-slate-500">여러 장의 이미지를 한 번에 올리고 일괄 변환하여 ZIP으로 다운로드하세요.</p>
+    </header>
+
+    <!-- Error/Message Box -->
+    <div id="messageBox" class="hidden p-4 rounded-xl text-sm font-medium transition-all"></div>
+
+    <!-- Upload Area -->
+    <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center cursor-pointer hover:bg-slate-50 transition-colors glass-panel flex flex-col items-center justify-center min-h-[200px]">
+        <!-- multiple 속성 추가로 여러 파일 선택 가능 -->
+        <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+        <div class="bg-blue-100 p-4 rounded-full mb-4">
+            <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-500"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">클릭하거나 여러 이미지를 드래그하세요</h3>
+        <p class="text-sm text-slate-400">지원 포맷: JPG, PNG, WebP 등 (한 번에 여러 장 선택 가능)</p>
+    </div>
+
+    <!-- Workspace Area (Hidden by default) -->
+    <div id="workspace" class="hidden space-y-6">
+        
+        <!-- Global Settings Panel -->
+        <div class="glass-panel p-6">
+            <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fa-solid fa-sliders text-blue-500 mr-2"></i>일괄 변환 설정</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                
+                <!-- Format Select -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">저장할 포맷</label>
+                    <select id="formatSelect" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-colors">
+                        <option value="image/png">PNG (무손실 - 품질 조절 불가)</option>
+                        <option value="image/webp" selected>WebP (고효율 손실 - 추천)</option>
+                        <option value="image/jpeg">JPG (일반 손실)</option>
+                    </select>
+                </div>
+
+                <!-- Quality Slider -->
+                <div id="qualityContainer">
+                    <div class="flex justify-between mb-1">
+                        <label class="block text-sm font-medium text-slate-700">압축 품질</label>
+                        <span id="qualityValue" class="text-sm font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded">80%</span>
+                    </div>
+                    <input type="range" id="qualitySlider" min="1" max="100" value="80" class="w-full mt-2">
+                    <p class="text-xs text-slate-400 mt-1">슬라이더를 조절하면 아래 목록의 예상 용량이 실시간으로 계산됩니다.</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- File List Panel -->
+        <div class="glass-panel p-6">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+                <h3 class="font-bold text-lg flex items-center">
+                    <i class="fa-solid fa-list-ul text-blue-500 mr-2"></i>작업 목록 
+                    <span id="fileCountBadge" class="ml-2 bg-slate-100 text-slate-600 text-xs py-1 px-2 rounded-full font-semibold">0장</span>
+                </h3>
+                <button id="clearAllBtn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">
+                    <i class="fa-solid fa-trash-can mr-1"></i>전체 삭제
+                </button>
+            </div>
+            
+            <!-- List Container -->
+            <div class="overflow-x-auto">
+                <div id="fileListContainer" class="max-h-[400px] overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                    <!-- File items will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="flex justify-end sticky bottom-4 z-10">
+            <button id="downloadAllBtn" class="shadow-lg shadow-blue-500/30 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-bold rounded-xl text-lg px-8 py-4 text-center transition-all transform hover:-translate-y-1 flex justify-center items-center">
+                <i class="fa-solid fa-file-zipper mr-2 text-xl"></i> 변환된 이미지 모두 다운로드 (ZIP)
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const workspace = document.getElementById('workspace');
+    const messageBox = document.getElementById('messageBox');
+    
+    const formatSelect = document.getElementById('formatSelect');
+    const qualityContainer = document.getElementById('qualityContainer');
+    const qualitySlider = document.getElementById('qualitySlider');
+    const qualityValue = document.getElementById('qualityValue');
+    
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileCountBadge = document.getElementById('fileCountBadge');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+
+    // 상태 관리 배열
+    let uploadedFiles = []; // { id, file, name, originalSize, objectUrl, img, projectedBlob, expectedSize, isProcessing }
+
+    // 유틸리티: 바이트 변환
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    // 유틸리티: 증감 퍼센트 HTML 생성
+    function getDiffHtml(original, newSize) {
+        if (!newSize) return `<span class="text-slate-400 text-xs">계산 중...</span>`;
+        const diff = newSize - original;
+        const percent = (Math.abs(diff) / original * 100).toFixed(1);
+        
+        if (diff > 0) {
+            return `<span class="text-red-500 text-xs font-medium bg-red-50 px-1.5 py-0.5 rounded"><i class="fa-solid fa-arrow-up text-[10px]"></i> ${percent}% 증가</span>`;
+        } else if (diff < 0) {
+            return `<span class="text-blue-500 text-xs font-medium bg-blue-50 px-1.5 py-0.5 rounded"><i class="fa-solid fa-arrow-down text-[10px]"></i> ${percent}% 감소</span>`;
+        }
+        return `<span class="text-slate-500 text-xs font-medium bg-slate-100 px-1.5 py-0.5 rounded">동일함</span>`;
+    }
+
+    // 메시지 표시 함수
+    function showMessage(msg, type = 'error') {
+        messageBox.className = `p-4 rounded-xl text-sm font-medium mb-4 ${
+            type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-blue-50 text-blue-700 border border-blue-200'
+        }`;
+        messageBox.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info'} mr-2"></i>${msg}`;
+        messageBox.classList.remove('hidden');
+        setTimeout(() => messageBox.classList.add('hidden'), 5000);
+    }
+
+    // 드래그 앤 드롭 이벤트
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-active'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-active'));
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('drag-active');
+        if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFiles(e.target.files);
+        fileInput.value = ''; // 동일 파일 재업로드 가능하도록 초기화
+    });
+
+    // 전역 설정 변경 이벤트 (디바운스 적용)
+    let debounceTimer;
+    qualitySlider.addEventListener('input', (e) => {
+        qualityValue.textContent = `${e.target.value}%`;
+        clearTimeout(debounceTimer);
+        // 슬라이더 이동이 멈추고 300ms 후에 일괄 재계산 실행
+        debounceTimer = setTimeout(() => recalculateAllFiles(), 300);
+    });
+
+    formatSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'image/png') {
+            qualityContainer.style.opacity = '0.4';
+            qualitySlider.disabled = true;
+        } else {
+            qualityContainer.style.opacity = '1';
+            qualitySlider.disabled = false;
+        }
+        recalculateAllFiles();
+    });
+
+    // 전체 삭제
+    clearAllBtn.addEventListener('click', () => {
+        uploadedFiles.forEach(f => URL.revokeObjectURL(f.objectUrl));
+        uploadedFiles = [];
+        updateUI();
+        workspace.classList.add('hidden');
+        dropzone.classList.remove('hidden');
+    });
+
+    // 파일 처리 시작
+    function handleFiles(files) {
+        let addedCount = 0;
+        Array.from(files).forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            
+            const fileObj = {
+                id: 'file_' + Date.now() + Math.random().toString(36).substring(2, 9),
+                file: file,
+                name: file.name,
+                originalSize: file.size,
+                objectUrl: URL.createObjectURL(file),
+                img: null,
+                projectedBlob: null,
+                expectedSize: null,
+                isProcessing: true
+            };
+            
+            uploadedFiles.push(fileObj);
+            addedCount++;
+            
+            // 이미지 로드 및 압축 계산
+            const img = new Image();
+            img.onload = () => {
+                fileObj.img = img;
+                calculateProjectedSize(fileObj);
+            };
+            img.src = fileObj.objectUrl;
+        });
+
+        if (addedCount > 0) {
+            workspace.classList.remove('hidden');
+            // 드롭존은 상단에 작게 유지하거나 숨길 수 있습니다. 여기서는 공간을 위해 숨깁니다.
+            dropzone.classList.add('hidden');
+            updateUI();
+        } else {
+            showMessage('이미지 파일만 업로드할 수 있습니다.');
+        }
+    }
+
+    // 개별 이미지 압축 예상 용량 계산
+    function calculateProjectedSize(fileObj) {
+        if (!fileObj.img) return;
+
+        fileObj.isProcessing = true;
+        updateFileRow(fileObj.id); // UI 업데이트 (로딩상태)
+
+        // 백그라운드 Canvas 생성
+        const canvas = document.createElement('canvas');
+        canvas.width = fileObj.img.width;
+        canvas.height = fileObj.img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(fileObj.img, 0, 0);
+
+        const format = formatSelect.value;
+        const quality = parseInt(qualitySlider.value) / 100;
+
+        // 비동기로 Blob 생성 (UI 멈춤 최소화)
+        canvas.toBlob((blob) => {
+            if (blob) {
+                fileObj.projectedBlob = blob;
+                fileObj.expectedSize = blob.size;
+            } else {
+                fileObj.expectedSize = -1; // 에러
+            }
+            fileObj.isProcessing = false;
+            updateFileRow(fileObj.id); // UI 업데이트 (완료상태)
+        }, format, format === 'image/png' ? undefined : quality);
+    }
+
+    // 전체 이미지 재계산 (설정 변경 시)
+    function recalculateAllFiles() {
+        uploadedFiles.forEach(fileObj => {
+            calculateProjectedSize(fileObj);
+        });
+    }
+
+    // 파일 개별 삭제
+    function removeFile(id) {
+        const index = uploadedFiles.findIndex(f => f.id === id);
+        if (index > -1) {
+            URL.revokeObjectURL(uploadedFiles[index].objectUrl);
+            uploadedFiles.splice(index, 1);
+            updateUI();
+            if (uploadedFiles.length === 0) {
+                workspace.classList.add('hidden');
+                dropzone.classList.remove('hidden');
+            }
+        }
+    }
+
+    // 전체 UI 렌더링
+    function updateUI() {
+        fileCountBadge.textContent = `${uploadedFiles.length}장`;
+        fileListContainer.innerHTML = '';
+        
+        uploadedFiles.forEach(fileObj => {
+            const row = document.createElement('div');
+            row.id = `row-${fileObj.id}`;
+            row.className = 'flex items-center p-3 bg-white border border-slate-200 rounded-xl hover:border-blue-300 transition-colors group';
+            
+            // Initial render content
+            row.innerHTML = getFileRowInnerHtml(fileObj);
+            fileListContainer.appendChild(row);
+
+            // Add delete event
+            row.querySelector('.delete-btn').addEventListener('click', () => removeFile(fileObj.id));
+        });
+    }
+
+    // 특정 행만 UI 업데이트 (성능 최적화)
+    function updateFileRow(id) {
+        const row = document.getElementById(`row-${id}`);
+        const fileObj = uploadedFiles.find(f => f.id === id);
+        if (row && fileObj) {
+            row.innerHTML = getFileRowInnerHtml(fileObj);
+            row.querySelector('.delete-btn').addEventListener('click', () => removeFile(fileObj.id));
+        }
+    }
+
+    // 행 내부 HTML 생성 로직
+    function getFileRowInnerHtml(fileObj) {
+        const isError = fileObj.expectedSize === -1;
+        
+        let expectedSizeHtml = '';
+        if (fileObj.isProcessing) {
+            expectedSizeHtml = `<i class="fa-solid fa-circle-notch fa-spin text-blue-500 mr-1"></i><span class="text-slate-500 text-sm">변환 중...</span>`;
+        } else if (isError) {
+            expectedSizeHtml = `<span class="text-red-500 text-sm font-medium">처리 실패</span>`;
+        } else {
+            const sizeClass = fileObj.expectedSize > fileObj.originalSize ? 'text-red-600' : 'text-green-600';
+            expectedSizeHtml = `
+                <div class="flex flex-col items-end">
+                    <span class="font-bold text-lg ${sizeClass}">${formatBytes(fileObj.expectedSize)}</span>
+                    ${getDiffHtml(fileObj.originalSize, fileObj.expectedSize)}
+                </div>
+            `;
+        }
+
+        return `
+            <!-- Thumbnail -->
+            <div class="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+                <img src="${fileObj.objectUrl}" class="w-full h-full object-cover" alt="thumb">
+            </div>
+            
+            <!-- Info -->
+            <div class="ml-4 flex-grow min-w-0 flex flex-col justify-center">
+                <h4 class="text-sm font-semibold text-slate-800 truncate" title="${fileObj.name}">${fileObj.name}</h4>
+                <p class="text-xs text-slate-500 mt-0.5">원본: ${formatBytes(fileObj.originalSize)}</p>
+            </div>
+            
+            <!-- Result -->
+            <div class="mx-4 flex-shrink-0 min-w-[100px] text-right">
+                ${expectedSizeHtml}
+            </div>
+            
+            <!-- Action -->
+            <button class="delete-btn text-slate-300 hover:text-red-500 p-2 rounded-lg transition-colors" title="삭제">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        `;
+    }
+
+    // 전체 다운로드 (ZIP 생성)
+    downloadAllBtn.addEventListener('click', async () => {
+        if (uploadedFiles.length === 0) return;
+
+        // 처리 중인 파일이 있는지 확인
+        if (uploadedFiles.some(f => f.isProcessing)) {
+            showMessage('아직 변환 중인 이미지가 있습니다. 잠시만 기다려주세요.', 'error');
+            return;
+        }
+
+        const originalBtnHtml = downloadAllBtn.innerHTML;
+        downloadAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2 text-xl"></i> 압축 파일 생성 중...';
+        downloadAllBtn.disabled = true;
+        downloadAllBtn.classList.add('opacity-80', 'cursor-not-allowed');
+
+        try {
+            const zip = new JSZip();
+            const format = formatSelect.value;
+            const ext = format.split('/')[1];
+
+            // ZIP에 파일 추가
+            uploadedFiles.forEach((fileObj) => {
+                if (fileObj.projectedBlob) {
+                    const originalName = fileObj.name.substring(0, fileObj.name.lastIndexOf('.')) || fileObj.name;
+                    // 원본 파일명 뒤에 _c를 추가하고 확장자를 붙임
+                    const fileName = `${originalName}_c.${ext}`;
+                    zip.file(fileName, fileObj.projectedBlob);
+                }
+            });
+
+            // ZIP 생성 및 다운로드 트리거
+            const content = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `Converted_Images_${new Date().getTime()}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+
+            showMessage('성공적으로 다운로드되었습니다.', 'success');
+
+        } catch (error) {
+            console.error(error);
+            showMessage('압축 파일 생성 중 오류가 발생했습니다.');
+        } finally {
+            downloadAllBtn.innerHTML = originalBtnHtml;
+            downloadAllBtn.disabled = false;
+            downloadAllBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+        }
+    });
+
+</script>
+</body>
+</html>
