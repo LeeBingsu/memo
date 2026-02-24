@@ -89,29 +89,6 @@
             background-color: rgba(0,0,0,0.05); padding: 1rem; border-radius: 0.5rem; text-align: center; font-weight: bold; transition: background-color 0.2s; cursor: pointer;
         }
         .nav-btn:hover { background-color: rgba(0,0,0,0.1); }
-
-        .fab-btn {
-            width: 3rem; height: 3rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transition: transform 0.2s, background-color 0.2s, opacity 0.3s; backdrop-filter: blur(4px);
-        }
-        .fab-btn:active { transform: scale(0.95); }
-
-        /* 설정 아이콘 숨김/노출 로직 */
-        .settings-trigger {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            z-index: 55;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .settings-trigger:hover, .settings-trigger.active {
-            opacity: 1;
-        }
-        @media (max-width: 768px) {
-            .settings-trigger { opacity: 0.15; } /* 모바일은 위치 표시를 위해 약간 보임 */
-        }
     </style>
 </head>
 <body class="bg-gray-50 h-screen flex flex-col font-sans-kr overflow-hidden text-gray-800 touch-pan-y">
@@ -168,21 +145,38 @@
             <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-150" style="width: 0%"></div>
         </div>
 
-        <header class="viewer-header-gradient absolute top-0 w-full p-4 flex justify-between items-center z-40 h-20 transition-opacity duration-300 opacity-0 hover:opacity-100">
-            <div class="flex items-center gap-2">
-                <button onclick="goBack()" class="flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm">
+        <!-- 🌟 수정된 상단바 (설정, 상하 이동 화살표 포함) -->
+        <header class="viewer-header-gradient absolute top-0 w-full p-2 sm:p-4 flex justify-between items-center z-40 h-16 sm:h-20 transition-opacity duration-300 opacity-0 hover:opacity-100 active:opacity-100 focus-within:opacity-100">
+            <!-- 왼쪽: 나가기, 목차 -->
+            <div class="flex items-center gap-1 shrink-0">
+                <button onclick="goBack()" class="flex items-center gap-1 p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="나가기">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                     <span class="hidden sm:inline">나가기</span>
                 </button>
-                <button onclick="toggleTOC()" class="flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm">
+                <button onclick="toggleTOC()" class="flex items-center gap-1 p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="목차">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
                     <span class="hidden sm:inline">목차</span>
                 </button>
             </div>
-            <h2 id="viewer-title" class="text-lg font-bold truncate max-w-[40%] text-center px-4 drop-shadow-md">제목</h2>
-            <button onclick="shareNovel()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-            </button>
+
+            <!-- 중앙: 제목 -->
+            <h2 id="viewer-title" class="text-base sm:text-lg font-bold flex-1 text-center px-2 truncate drop-shadow-md">제목</h2>
+            
+            <!-- 오른쪽: 위로, 아래로, 공유, 설정 -->
+            <div class="flex items-center gap-1 shrink-0">
+                <button onclick="scrollToTop()" class="p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="맨 위로">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+                </button>
+                <button onclick="scrollToBottom()" class="p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="맨 아래로">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                <button onclick="shareNovel()" class="p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm hidden sm:flex" title="공유">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                </button>
+                <button onclick="toggleSettings()" class="p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="설정">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </button>
+            </div>
         </header>
 
         <main id="content-container" class="h-full overflow-y-auto px-4 pb-32 pt-16 md:px-0 scroll-smooth">
@@ -220,27 +214,9 @@
             <div id="toc-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
         </aside>
 
-        <!-- 설정 아이콘 (평소 숨김) -->
-        <div class="settings-trigger" id="settings-btn-container">
-            <button id="settings-toggle-btn" onclick="toggleSettings()" class="fab-btn bg-blue-600 text-white hover:bg-blue-700 shadow-lg" title="설정">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform transition-transform duration-300" id="settings-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 absolute opacity-0 transform transition-all duration-300" id="close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-        </div>
-
-        <!-- 설정 패널 (위/아래 화살표 포함) -->
+        <!-- 설정 패널 (버튼 및 화살표 제거됨) -->
         <div id="settings-panel" class="absolute bottom-0 left-0 w-full bg-[var(--bg-color)] border-t border-current/10 p-6 z-40 panel-hidden shadow-2xl rounded-t-2xl">
             <div class="max-w-3xl mx-auto space-y-6 relative">
-                <!-- 상하 이동 숏컷 -->
-                <div class="absolute -top-20 right-0 flex flex-col gap-3">
-                    <button onclick="scrollToTop()" class="fab-btn bg-white/20 backdrop-blur-md text-current border border-current/10" title="맨 위로">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                    </button>
-                    <button onclick="scrollToBottom()" class="fab-btn bg-white/20 backdrop-blur-md text-current border border-current/10" title="맨 아래로">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                </div>
-
                 <div class="w-12 h-1 bg-current/20 rounded-full mx-auto mb-2 cursor-pointer" onclick="toggleSettings()"></div>
                 <div class="space-y-2">
                     <label class="text-sm font-bold opacity-70">배경 테마</label>
@@ -571,18 +547,11 @@
 
         function toggleSettings() {
             const p = document.getElementById('settings-panel');
-            const b = document.getElementById('settings-btn-container');
             const h = p.classList.contains('panel-hidden');
             if (h) {
                 p.classList.remove('panel-hidden'); p.classList.add('panel-visible');
-                b.classList.add('active');
-                document.getElementById('settings-icon').classList.add('opacity-0');
-                document.getElementById('close-icon').classList.remove('opacity-0');
             } else {
                 p.classList.add('panel-hidden'); p.classList.remove('panel-visible');
-                b.classList.remove('active');
-                document.getElementById('settings-icon').classList.remove('opacity-0');
-                document.getElementById('close-icon').classList.add('opacity-0');
             }
         }
 
