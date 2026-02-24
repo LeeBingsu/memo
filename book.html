@@ -4,10 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>웹소설 리더 - 내 서재</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PeerJS for P2P Sync -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- QRCode generators and scanners -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- JSZip & FileSaver for Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -106,7 +110,7 @@
             opacity: 1;
         }
         @media (max-width: 768px) {
-            .settings-trigger { opacity: 0.1; } /* 모바일은 위치 표시를 위해 약간 보임 */
+            .settings-trigger { opacity: 0.15; } /* 모바일은 위치 표시를 위해 약간 보임 */
         }
     </style>
 </head>
@@ -133,7 +137,7 @@
             
             <div class="flex items-center gap-2 w-full md:w-auto justify-end">
                 <div class="relative">
-                    <button onclick="toggleDownloadMenu()" class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition-colors" title="내보내기">
+                    <button onclick="toggleDownloadMenu(event)" class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition-colors" title="내보내기">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     </button>
                     <div id="download-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30 py-1">
@@ -146,7 +150,6 @@
                     <span id="sort-label">최신순</span>
                 </button>
                 <div class="h-6 w-px bg-gray-300 mx-1"></div>
-                <button onclick="openWriteModal()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg><span class="hidden sm:inline">글쓰기</span></button>
                 <button onclick="openUploadModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg><span class="hidden sm:inline">업로드</span></button>
             </div>
         </header>
@@ -154,7 +157,7 @@
         <main class="flex-1 overflow-y-auto p-6" id="library-container">
             <div id="book-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-7xl mx-auto"></div>
             <div id="empty-state" class="hidden h-full flex flex-col items-center justify-center text-gray-400 space-y-4 pb-20">
-                <div class="text-6xl">📂</div><p class="text-lg">폴더가 비어있습니다.</p><p class="text-sm">우측 상단 버튼을 눌러 소설을 추가하거나 작성해보세요.</p>
+                <div class="text-6xl">📂</div><p class="text-lg">서재가 비어있습니다.</p><p class="text-sm">우측 상단 버튼을 눌러 소설을 추가해보세요.</p>
             </div>
         </main>
     </div>
@@ -273,7 +276,7 @@
         </div>
     </div>
 
-    <!-- P2P 모달 등 (기존 유지) -->
+    <!-- P2P 모달 -->
     <div id="sync-modal" class="fixed inset-0 bg-black/50 z-[65] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto">
             <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">✕</button>
@@ -283,10 +286,10 @@
                     <h4 class="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">📡 기기 간 직접 전송 (P2P)</h4>
                     <div class="space-y-3">
                         <button onclick="startHostMode()" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
-                            <div class="text-left"><div class="font-bold">📤 보내기 (Host)</div><div class="text-xs opacity-70">일회용 코드/QR로 전송</div></div>
+                            <div class="text-left"><div class="font-bold">📤 내 서재 데이터 보내기</div><div class="text-xs opacity-70">일회용 코드/QR로 전송</div></div>
                         </button>
                         <button onclick="startClientMode()" class="w-full bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 p-4 rounded-xl flex items-center justify-between group transition-colors">
-                            <div class="text-left"><div class="font-bold">📥 받기 (Client)</div><div class="text-xs opacity-70">코드 입력/QR 스캔</div></div>
+                            <div class="text-left"><div class="font-bold">📥 다른 기기 데이터 받기</div><div class="text-xs opacity-70">코드 입력/QR 스캔</div></div>
                         </button>
                     </div>
                 </div>
@@ -299,31 +302,37 @@
                         </button>
                         <div class="relative">
                             <input type="file" id="backup-input" accept=".json" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="importFromFile(this)">
-                            <button class="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 p-3 rounded-lg flex items-center justify-center gap-2 font-medium text-sm">
+                            <button class="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 p-3 rounded-lg flex items-center justify-center gap-2 font-medium text-sm pointer-events-none">
                                 데이터 불러오기 (.json)
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+            
             <div id="sync-host-view" class="hidden flex flex-col items-center text-center space-y-4">
-                <p class="text-sm text-gray-600">받는 기기에 아래 코드를 입력하세요.</p>
-                <div class="bg-gray-50 border-2 border-dashed border-blue-300 rounded-xl p-4 w-full"><p class="text-xs text-gray-500 mb-1">일회용 연결 코드</p><div id="host-code-display" class="text-4xl font-mono font-bold tracking-widest text-blue-600 select-all">-----</div></div>
-                <div id="qrcode-container" class="bg-white p-2 rounded-lg border shadow-sm"></div>
+                <p class="text-sm text-gray-600">받는 기기에 아래 코드를 입력하거나 QR을 스캔하세요.</p>
+                <div class="bg-gray-50 border-2 border-dashed border-blue-300 rounded-xl p-4 w-full">
+                    <p class="text-xs text-gray-500 mb-1">일회용 연결 코드</p>
+                    <div id="host-code-display" class="text-4xl font-mono font-bold tracking-widest text-blue-600 select-all">-----</div>
+                </div>
+                <div id="qrcode-container" class="bg-white p-2 rounded-lg border shadow-sm flex justify-center"></div>
                 <button onclick="resetSyncView()" class="text-gray-500 text-sm hover:underline mt-2">뒤로 가기</button>
             </div>
+            
             <div id="sync-client-view" class="hidden flex flex-col space-y-4">
                 <div id="manual-input-container" class="space-y-4">
-                    <input type="number" id="target-peer-id" placeholder="12345" class="w-full text-center text-2xl font-mono border-2 border-gray-300 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors" maxlength="5">
-                    <button onclick="connectToPeer()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition-transform active:scale-95">연결하기</button>
-                   <button onclick="startScanner()" class="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-200 flex items-center justify-center gap-2">카메라 켜기</button>
+                    <input type="number" id="target-peer-id" placeholder="5자리 숫자 코드 입력" class="w-full text-center text-2xl font-mono border-2 border-gray-300 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors" maxlength="5">
+                    <button onclick="connectToPeer()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition-transform active:scale-95">연결하고 데이터 받기</button>
+                    <button onclick="startScanner()" class="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-200 flex items-center justify-center gap-2">카메라로 QR 스캔하기</button>
                 </div>
-                <div id="qr-reader-container" class="hidden">
-                    <div id="reader" class="bg-black"></div>
+                <div id="qr-reader-container" class="hidden flex flex-col items-center">
+                    <div id="reader" class="bg-black w-full overflow-hidden rounded-lg"></div>
                     <button onclick="stopScanner()" class="w-full mt-2 py-2 bg-gray-200 rounded text-sm font-medium">카메라 끄기</button>
                 </div>
                 <button onclick="resetSyncView()" class="text-gray-500 text-sm hover:underline text-center mt-2">뒤로 가기</button>
             </div>
+            
             <div id="sync-status" class="mt-4 text-center hidden">
                 <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold animate-pulse">
                     <span id="sync-status-text">상태 메시지</span>
@@ -332,7 +341,7 @@
         </div>
     </div>
 
-    <!-- 기타 모달 -->
+    <!-- 파일 업로드 / 폴더 생성 모달 -->
     <div id="upload-modal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button onclick="closeUploadModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
@@ -350,26 +359,35 @@
     </div>
 
     <script>
+        // --- 1. 전역 변수 및 초기화 ---
         const DB_NAME = 'WebNovelLibrary';
         const DB_VERSION = 3;
+        const PEER_PREFIX = 'wnr-sync-'; // PeerJS용 접두사
         let db;
         let currentBookId = null;
         let currentBookData = null;
         let currentCollectionId = null;
         let currentSort = { field: 'lastRead', order: 'desc' };
         let settings = { theme: 'theme-sepia', fontSize: 20, lineHeight: 1.8, fontFamily: 'sans' };
-        let peer = null; let conn = null; let html5QrCode = null;
+        
+        let peer = null; 
+        let conn = null; 
+        let html5QrCode = null;
         let bookTOC = []; 
-        let tempTOC = []; 
 
         async function init() {
             loadSettings();
             await initDB();
             window.addEventListener('hashchange', handleHashChange);
             handleHashChange();
+            
             document.getElementById('file-input').addEventListener('change', function() {
-                if(this.files[0]) { document.getElementById('selected-filename').textContent = this.files[0].name; document.getElementById('selected-filename').classList.remove('hidden'); }
+                if(this.files[0]) { 
+                    document.getElementById('selected-filename').textContent = this.files[0].name; 
+                    document.getElementById('selected-filename').classList.remove('hidden'); 
+                }
             });
+            
             document.getElementById('content-container').addEventListener('scroll', throttle(() => { 
                 updateProgress(); 
                 if(currentBookId) saveScrollPosition(); 
@@ -378,28 +396,78 @@
             // 전역 클릭 감지로 다운로드 메뉴 닫기
             document.addEventListener('click', (e) => {
                 const menu = document.getElementById('download-menu');
-                const btn = document.querySelector('button[onclick="toggleDownloadMenu()"]');
-                if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) menu.classList.add('hidden');
+                const btn = document.querySelector('button[title="내보내기"]');
+                if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
             });
         }
 
-        // --- Core Functions ---
-        function initDB(){return new Promise((r,j)=>{const q=indexedDB.open(DB_NAME,DB_VERSION);q.onerror=()=>j("Err");q.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('books')){const s=d.createObjectStore('books',{keyPath:'id',autoIncrement:true});s.createIndex('lastRead','lastRead');s.createIndex('title','title');}if(!d.objectStoreNames.contains('collections')){const s=d.createObjectStore('collections',{keyPath:'id',autoIncrement:true});s.createIndex('name','name');}};q.onsuccess=e=>{db=e.target.result;r(db)}})}
+        // --- 2. IndexedDB 코어 함수 ---
+        function initDB() {
+            return new Promise((r,j)=>{
+                const q=indexedDB.open(DB_NAME,DB_VERSION);
+                q.onerror=()=>j("Err");
+                q.onupgradeneeded=e=>{
+                    const d=e.target.result;
+                    if(!d.objectStoreNames.contains('books')){
+                        const s=d.createObjectStore('books',{keyPath:'id',autoIncrement:true});
+                        s.createIndex('lastRead','lastRead');
+                        s.createIndex('title','title');
+                    }
+                    if(!d.objectStoreNames.contains('collections')){
+                        const s=d.createObjectStore('collections',{keyPath:'id',autoIncrement:true});
+                        s.createIndex('name','name');
+                    }
+                };
+                q.onsuccess=e=>{db=e.target.result;r(db)}
+            });
+        }
         function getAllCollections(){return new Promise(r=>{db.transaction(['collections'],'readonly').objectStore('collections').getAll().onsuccess=e=>r(e.target.result)})}
         function addCollection(n){return new Promise(r=>{db.transaction(['collections'],'readwrite').objectStore('collections').add({name:n,created:new Date()}).onsuccess=()=>r()})}
         function saveBookToDB(t,c,cid=null){return new Promise(r=>{db.transaction(['books'],'readwrite').objectStore('books').add({title:t.replace('.txt',''),content:c,progress:0,lastRead:new Date(),coverId:Math.floor(Math.random()*5)+1,collectionId:cid}).onsuccess=e=>r(e.target.result)})}
         function getAllBooks(){return new Promise(r=>{db.transaction(['books'],'readonly').objectStore('books').getAll().onsuccess=e=>r(e.target.result)})}
         function getBook(id){return new Promise(r=>{db.transaction(['books'],'readonly').objectStore('books').get(id).onsuccess=e=>r(e.target.result)})}
         function deleteBook(id){return new Promise(r=>{db.transaction(['books'],'readwrite').objectStore('books').delete(id).onsuccess=()=>r()})}
-        function updateBookProgress(id,st,p){return new Promise(r=>{const t=db.transaction(['books'],'readwrite');const s=t.objectStore('books');s.get(id).onsuccess=e=>{const d=e.target.result;if(d){d.scrollTop=st;d.progress=p;d.lastRead=new Date();s.put(d)}r()}})}
-        function getCollection(id){return new Promise(r=>{const t=db.transaction(['collections'],'readonly');t.objectStore('collections').get(id).onsuccess=e=>r(e.target.result)})}
+        function updateBookProgress(id,st,p){
+            return new Promise(r=>{
+                const s=db.transaction(['books'],'readwrite').objectStore('books');
+                s.get(id).onsuccess=e=>{
+                    const d=e.target.result;
+                    if(d){ d.scrollTop=st; d.progress=p; d.lastRead=new Date(); s.put(d); }
+                    r();
+                }
+            });
+        }
+        function saveBookTOC(id, toc){
+            return new Promise(r=>{
+                const s=db.transaction(['books'],'readwrite').objectStore('books');
+                s.get(id).onsuccess=e=>{
+                    const d=e.target.result;
+                    if(d){ d.toc=toc; s.put(d); }
+                    r();
+                }
+            })
+        }
 
-        // --- Library Logic ---
+        // --- 3. 서재(Library) UI 로직 ---
         function handleHashChange() {
             const hash = window.location.hash;
-            if (hash.startsWith('#/folder/')) { const id = parseInt(hash.replace('#/folder/', '')); renderLibrary(id); document.getElementById('library-screen').classList.remove('hidden'); document.getElementById('viewer-screen').classList.add('hidden'); } 
-            else if (hash.startsWith('#/read/')) { const id = parseInt(hash.replace('#/read/', '')); openBook(id); } 
-            else { renderLibrary(null); document.getElementById('library-screen').classList.remove('hidden'); document.getElementById('viewer-screen').classList.add('hidden'); }
+            if (hash.startsWith('#/folder/')) { 
+                const id = parseInt(hash.replace('#/folder/', '')); 
+                renderLibrary(id); 
+                document.getElementById('library-screen').classList.remove('hidden'); 
+                document.getElementById('viewer-screen').classList.add('hidden'); 
+            } 
+            else if (hash.startsWith('#/read/')) { 
+                const id = parseInt(hash.replace('#/read/', '')); 
+                openBook(id); 
+            } 
+            else { 
+                renderLibrary(null); 
+                document.getElementById('library-screen').classList.remove('hidden'); 
+                document.getElementById('viewer-screen').classList.add('hidden'); 
+            }
         }
         function goToRoot() { window.location.hash = '#/'; }
         function goToFolder(id) { window.location.hash = `#/folder/${id}`; }
@@ -454,7 +522,15 @@
             return filtered;
         }
 
-        // --- Viewer Logic ---
+        function cycleSort() {
+            if (currentSort.field === 'lastRead') { currentSort = { field: 'title', order: 'asc' }; document.getElementById('sort-label').textContent = '가나다순'; } 
+            else { currentSort = { field: 'lastRead', order: 'desc' }; document.getElementById('sort-label').textContent = '최신순'; }
+            renderLibrary(currentCollectionId);
+        }
+
+        async function confirmDelete(e,id){e.stopPropagation();if(confirm('삭제하시겠습니까?')){await deleteBook(id);renderLibrary(currentCollectionId)}}
+
+        // --- 4. 뷰어(Viewer) 및 설정 로직 ---
         async function openBook(id) {
             showLoader('로딩 중...');
             const book = await getBook(id);
@@ -462,11 +538,15 @@
             currentBookId = id; currentBookData = book;
             document.getElementById('viewer-title').textContent = book.title;
 
+            // 목차 복원
+            bookTOC = book.toc || [];
+
             const frag = document.createDocumentFragment();
             book.content.split(/\r?\n/).forEach((line, idx) => {
                 const p = document.createElement('p');
                 p.textContent = line.trim() || '\u00A0';
                 p.dataset.lineIndex = idx;
+                p.id = `line-${idx}`;
                 frag.appendChild(p);
             });
             const cin = document.getElementById('content-inner'); cin.innerHTML=''; cin.appendChild(frag);
@@ -477,6 +557,16 @@
             
             if(book.scrollTop) setTimeout(()=> document.getElementById('content-container').scrollTop = book.scrollTop, 50);
             hideLoader();
+        }
+
+        async function moveToNeighbor(offset) {
+            const books = await getSortedBooks(currentCollectionId);
+            const index = books.findIndex(b => b.id === currentBookId);
+            if (index !== -1 && books[index + offset]) {
+                goToReader(books[index + offset].id);
+            } else {
+                alert(offset > 0 ? '마지막 소설입니다.' : '첫 번째 소설입니다.');
+            }
         }
 
         function toggleSettings() {
@@ -515,23 +605,347 @@
         function updateProgress(){const c=document.getElementById('content-container');const p=(c.scrollTop/(c.scrollHeight-c.clientHeight))*100||0;document.getElementById('progress-bar').style.width=`${p}%`;return{scrollTop:c.scrollTop,percent:p}}
         function saveScrollPosition(){if(currentBookId){const{scrollTop,percent}=updateProgress();updateBookProgress(currentBookId,scrollTop,percent)}}
 
-        // --- Utils ---
+        // --- 5. 목차 (TOC) 로직 ---
+        function toggleTOC() {
+            const s = document.getElementById('toc-sidebar');
+            const d = document.getElementById('toc-dim');
+            if(s.classList.contains('toc-hidden')){
+                s.classList.remove('toc-hidden'); s.classList.add('toc-visible');
+                d.classList.remove('hidden'); setTimeout(()=>d.classList.add('opacity-100'),10);
+                renderTOC();
+            } else {
+                s.classList.add('toc-hidden'); s.classList.remove('toc-visible');
+                d.classList.remove('opacity-100'); setTimeout(()=>d.classList.add('hidden'),300);
+            }
+        }
+
+        function renderTOC() {
+            const list = document.getElementById('toc-list');
+            list.innerHTML = '';
+            if(bookTOC.length === 0) {
+                list.innerHTML = '<div class="text-sm text-gray-500 p-4 text-center">저장된 목차가 없습니다.<br>자동 분석을 실행해보세요.</div>';
+                return;
+            }
+            bookTOC.forEach((item, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-3 hover:bg-black/5 rounded text-sm truncate flex justify-between items-center group';
+                btn.innerHTML = `<span>${item.title}</span> <span class="text-xs text-red-400 opacity-0 group-hover:opacity-100 px-2" onclick="deleteTOCItem(event, ${index})">✕</span>`;
+                btn.onclick = (e) => {
+                    if(e.target.tagName !== 'SPAN' || !e.target.classList.contains('text-red-400')) {
+                        const el = document.getElementById(`line-${item.lineIndex}`);
+                        if(el) { el.scrollIntoView({behavior: 'smooth', block: 'start'}); toggleTOC(); }
+                    }
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        async function openAutoTOCModal() {
+            showLoader('목차 분석 중...');
+            const paragraphs = document.querySelectorAll('.viewer-content p');
+            const regex = /^(제\s*\d+\s*[장편화]|chapter\s*\d+)/i;
+            const newTOC = [];
+            
+            paragraphs.forEach(p => {
+                const text = p.textContent.trim();
+                if(text.length > 2 && text.length < 30 && regex.test(text)) {
+                    newTOC.push({ title: text, lineIndex: parseInt(p.dataset.lineIndex) });
+                    p.classList.add('chapter-title');
+                }
+            });
+
+            if(newTOC.length > 0) {
+                bookTOC = newTOC;
+                await saveBookTOC(currentBookId, bookTOC);
+                renderTOC();
+            } else {
+                alert('자동으로 식별할 수 있는 목차(제 N 화 등)가 없습니다.');
+            }
+            hideLoader();
+        }
+
+        async function addCurrentPositionToTOC() {
+            const c = document.getElementById('content-container');
+            const elements = document.elementsFromPoint(window.innerWidth / 2, 100);
+            const p = elements.find(el => el.tagName === 'P' && el.parentElement.id === 'content-inner');
+            
+            if (p) {
+                const title = prompt("현재 위치의 목차 이름을 입력하세요:", p.textContent.substring(0, 15) + "...");
+                if (title) {
+                    bookTOC.push({ title: title, lineIndex: parseInt(p.dataset.lineIndex) });
+                    bookTOC.sort((a,b) => a.lineIndex - b.lineIndex);
+                    await saveBookTOC(currentBookId, bookTOC);
+                    renderTOC();
+                }
+            }
+        }
+        
+        async function deleteTOCItem(e, index) {
+            e.stopPropagation();
+            bookTOC.splice(index, 1);
+            await saveBookTOC(currentBookId, bookTOC);
+            renderTOC();
+        }
+
+        // --- 6. P2P 동기화 및 백업 (PeerJS) ---
+        function openSyncModal() {
+            document.getElementById('sync-modal').classList.remove('hidden');
+            resetSyncView();
+        }
+        function closeSyncModal() {
+            document.getElementById('sync-modal').classList.add('hidden');
+            if (peer) { peer.destroy(); peer = null; }
+            stopScanner();
+        }
+        function resetSyncView() {
+            document.getElementById('sync-main-view').classList.remove('hidden');
+            document.getElementById('sync-host-view').classList.add('hidden');
+            document.getElementById('sync-client-view').classList.add('hidden');
+            document.getElementById('sync-status').classList.add('hidden');
+            stopScanner();
+            if (peer) { peer.destroy(); peer = null; }
+        }
+        function showSyncStatus(msg, isError = false) {
+            const el = document.getElementById('sync-status');
+            const txt = document.getElementById('sync-status-text');
+            el.classList.remove('hidden');
+            txt.textContent = msg;
+            txt.parentElement.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold animate-pulse ${isError ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`;
+        }
+
+        // HOST 모드 (보내기)
+        async function startHostMode() {
+            document.getElementById('sync-main-view').classList.add('hidden');
+            document.getElementById('sync-host-view').classList.remove('hidden');
+            
+            const randomCode = Math.floor(10000 + Math.random() * 90000).toString(); // 5자리 숫자
+            document.getElementById('host-code-display').textContent = randomCode;
+            
+            // QR 생성
+            document.getElementById('qrcode-container').innerHTML = '';
+            new QRCode(document.getElementById('qrcode-container'), {
+                text: randomCode, width: 150, height: 150, colorDark: "#000", colorLight: "#fff"
+            });
+
+            showSyncStatus("상대방의 연결을 기다리는 중...");
+            
+            peer = new Peer(PEER_PREFIX + randomCode);
+            peer.on('connection', (connection) => {
+                conn = connection;
+                showSyncStatus("기기 연결됨! 데이터 전송 중...");
+                conn.on('data', async (data) => {
+                    if (data === 'REQ_DATA') {
+                        // DB 데이터 추출 및 전송
+                        const books = await getAllBooks();
+                        const collections = await getAllCollections();
+                        conn.send({ type: 'SYNC_DATA', payload: { books, collections } });
+                        showSyncStatus("전송 완료! 안전하게 닫으셔도 됩니다.");
+                    }
+                });
+            });
+            peer.on('error', (err) => showSyncStatus("오류 발생: " + err.type, true));
+        }
+
+        // CLIENT 모드 (받기)
+        function startClientMode() {
+            document.getElementById('sync-main-view').classList.add('hidden');
+            document.getElementById('sync-client-view').classList.remove('hidden');
+        }
+
+        function connectToPeer(code = null) {
+            const targetCode = code || document.getElementById('target-peer-id').value.trim();
+            if (!targetCode || targetCode.length !== 5) { alert("5자리 코드를 입력해주세요."); return; }
+            
+            showSyncStatus("연결 시도 중...");
+            peer = new Peer(); // 클라이언트는 랜덤 ID
+            
+            peer.on('open', () => {
+                conn = peer.connect(PEER_PREFIX + targetCode);
+                conn.on('open', () => {
+                    showSyncStatus("연결 성공! 데이터 요청 중...");
+                    conn.send('REQ_DATA');
+                });
+                
+                conn.on('data', async (data) => {
+                    if (data.type === 'SYNC_DATA') {
+                        showSyncStatus("데이터 수신 완료. 저장 중...");
+                        await processImportedData(data.payload);
+                        showSyncStatus("동기화 완료!");
+                        setTimeout(() => { closeSyncModal(); renderLibrary(null); }, 1500);
+                    }
+                });
+                conn.on('error', () => showSyncStatus("전송 오류 발생", true));
+            });
+            peer.on('error', (err) => showSyncStatus("연결할 수 없습니다. 코드를 확인하세요.", true));
+        }
+
+        // QR 스캐너 (Client)
+        function startScanner() {
+            document.getElementById('manual-input-container').classList.add('hidden');
+            document.getElementById('qr-reader-container').classList.remove('hidden');
+            
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    if (decodedText && decodedText.length === 5 && !isNaN(decodedText)) {
+                        stopScanner();
+                        document.getElementById('target-peer-id').value = decodedText;
+                        connectToPeer(decodedText);
+                    }
+                },
+                (err) => {}
+            ).catch(err => {
+                alert("카메라 권한이 필요합니다.");
+                stopScanner();
+            });
+        }
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }).catch(e => console.log(e));
+            }
+            document.getElementById('manual-input-container').classList.remove('hidden');
+            document.getElementById('qr-reader-container').classList.add('hidden');
+        }
+
+        // 백업/복원
+        async function exportAllData() {
+            const books = await getAllBooks();
+            const collections = await getAllCollections();
+            const data = JSON.stringify({ books, collections });
+            const blob = new Blob([data], { type: 'application/json' });
+            saveAs(blob, `WebNovelBackup_${new Date().toISOString().slice(0,10)}.json`);
+        }
+
+        function importFromFile(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    showLoader('데이터 복원 중...');
+                    const data = JSON.parse(e.target.result);
+                    await processImportedData(data);
+                    renderLibrary(null);
+                    hideLoader();
+                    alert('복원 완료!');
+                    closeSyncModal();
+                } catch(err) {
+                    hideLoader(); alert('잘못된 백업 파일입니다.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function processImportedData(data) {
+            if(data.collections) {
+                for(let c of data.collections) {
+                    const exists = await new Promise(r=>db.transaction(['collections'],'readonly').objectStore('collections').get(c.id).onsuccess=e=>r(e.target.result));
+                    if(!exists) await new Promise(r=>db.transaction(['collections'],'readwrite').objectStore('collections').put(c).onsuccess=()=>r());
+                }
+            }
+            if(data.books) {
+                for(let b of data.books) {
+                    const exists = await new Promise(r=>db.transaction(['books'],'readonly').objectStore('books').get(b.id).onsuccess=e=>r(e.target.result));
+                    if(!exists) await new Promise(r=>db.transaction(['books'],'readwrite').objectStore('books').put(b).onsuccess=()=>r());
+                }
+            }
+        }
+
+        // --- 7. 내보내기 및 공유 (ZIP, TXT, Share) ---
+        function toggleDownloadMenu(e) {
+            e.stopPropagation();
+            document.getElementById('download-menu').classList.toggle('hidden');
+        }
+
+        async function downloadAsZip() {
+            document.getElementById('download-menu').classList.add('hidden');
+            showLoader('압축 중...');
+            const books = await getSortedBooks(currentCollectionId);
+            if(books.length === 0) { hideLoader(); alert('내보낼 소설이 없습니다.'); return; }
+            
+            const zip = new JSZip();
+            books.forEach(b => zip.file(`${b.title}.txt`, b.content));
+            
+            const blob = await zip.generateAsync({type:"blob"});
+            saveAs(blob, `MyWebNovels_${new Date().toISOString().slice(0,10)}.zip`);
+            hideLoader();
+        }
+
+        async function downloadAsMerged() {
+            document.getElementById('download-menu').classList.add('hidden');
+            showLoader('병합 중...');
+            const books = await getSortedBooks(currentCollectionId);
+            if(books.length === 0) { hideLoader(); alert('내보낼 소설이 없습니다.'); return; }
+            
+            let mergedContent = "";
+            books.forEach(b => {
+                mergedContent += `\n\n========== ${b.title} ==========\n\n`;
+                mergedContent += b.content;
+            });
+            
+            const blob = new Blob([mergedContent], { type: 'text/plain;charset=utf-8' });
+            saveAs(blob, `Merged_WebNovels_${new Date().toISOString().slice(0,10)}.txt`);
+            hideLoader();
+        }
+
+        function shareNovel() {
+            if(!currentBookData) return;
+            if (navigator.share) {
+                const file = new File([currentBookData.content], `${currentBookData.title}.txt`, { type: "text/plain" });
+                navigator.share({
+                    title: currentBookData.title,
+                    text: '웹소설 리더에서 공유된 소설입니다.',
+                    files: [file]
+                }).catch(console.error);
+            } else {
+                alert('이 브라우저는 공유 기능을 지원하지 않습니다. 텍스트로 다운로드합니다.');
+                const blob = new Blob([currentBookData.content], { type: 'text/plain;charset=utf-8' });
+                saveAs(blob, `${currentBookData.title}.txt`);
+            }
+        }
+
+        // --- 8. 기타 UI 컨트롤 (업로드 등) ---
         function showLoader(m){document.getElementById('loader-text').textContent=m;document.getElementById('loader-overlay').classList.remove('hidden')}
         function hideLoader(){document.getElementById('loader-overlay').classList.add('hidden')}
         function throttle(f,l){let t;return function(){if(!t){f.apply(this,arguments);t=true;setTimeout(()=>t=false,l)}}}
         
-        async function confirmDelete(e,id){e.stopPropagation();if(confirm('삭제하시겠습니까?')){await deleteBook(id);renderLibrary(currentCollectionId)}}
-        function openUploadModal(){document.getElementById('upload-modal').classList.remove('hidden')}
+        function openUploadModal(){document.getElementById('upload-modal').classList.remove('hidden'); document.getElementById('selected-filename').classList.add('hidden'); document.getElementById('file-input').value=''; }
         function closeUploadModal(){document.getElementById('upload-modal').classList.add('hidden')}
-        async function processUpload(){const f=document.getElementById('file-input').files[0];if(!f)return;closeUploadModal();showLoader('저장 중...');const enc=document.getElementById('encoding-select').value;const r=new FileReader();r.onload=async(e)=>{await saveBookToDB(f.name,e.target.result,currentCollectionId);renderLibrary(currentCollectionId);hideLoader()};r.readAsText(f,enc)}
-        function openCreateCollectionModal(){document.getElementById('create-collection-modal').classList.remove('hidden')}
-        function closeCreateCollectionModal(){document.getElementById('create-collection-modal').classList.add('hidden')}
-        async function createCollection(){const n=document.getElementById('new-collection-name').value.trim();if(!n)return;await addCollection(n);closeCreateCollectionModal();renderLibrary(currentCollectionId)}
         
-        // --- Dummy for Sync/TOC (Not requested to change but needed for compilation) ---
-        function toggleTOC(){} function openSyncModal(){} function closeSyncModal(){} function startHostMode(){} function startClientMode(){} function exportAllData(){} function importFromFile(){} function shareNovel(){} function toggleDownloadMenu(){} function downloadAsZip(){} function downloadAsMerged(){} function cycleSort(){} function moveToNeighbor(){} function openAutoTOCModal(){} function addCurrentPositionToTOC(){}
+        async function processUpload(){
+            const f=document.getElementById('file-input').files[0];
+            if(!f) return;
+            closeUploadModal();
+            showLoader('저장 중...');
+            const enc=document.getElementById('encoding-select').value;
+            const r=new FileReader();
+            r.onload=async(e)=>{
+                await saveBookToDB(f.name, e.target.result, currentCollectionId);
+                renderLibrary(currentCollectionId);
+                hideLoader();
+            };
+            r.readAsText(f, enc);
+        }
 
+        function openCreateCollectionModal(){document.getElementById('create-collection-modal').classList.remove('hidden'); document.getElementById('new-collection-name').value=''; }
+        function closeCreateCollectionModal(){document.getElementById('create-collection-modal').classList.add('hidden')}
+        async function createCollection(){
+            const n=document.getElementById('new-collection-name').value.trim();
+            if(!n) return;
+            await addCollection(n);
+            closeCreateCollectionModal();
+            renderLibrary(currentCollectionId);
+        }
+
+        // 실행
         init();
     </script>
 </body>
 </html>
+
+
