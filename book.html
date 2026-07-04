@@ -296,6 +296,16 @@
                 <div>
                     <h4 class="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">💾 파일 백업 및 복원</h4>
                     <div class="space-y-3">
+                        <div class="border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50">
+                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                <input type="checkbox" id="export-include-translations" checked class="rounded">
+                                번역 캐시 포함 (Google/AI/DeepL 번역 결과)
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                <input type="checkbox" id="export-include-apikeys" class="rounded">
+                                API 키 포함 (Gemini/DeepL 키 — 파일 유출 시 노출 위험)
+                            </label>
+                        </div>
                         <button onclick="exportAllData()" class="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 p-3 rounded-lg flex items-center justify-center gap-2 font-medium text-sm">
                             전체 데이터 내보내기 (.json)
                         </button>
@@ -1134,9 +1144,29 @@
 
         // 백업/복원
         async function exportAllData() {
-            const books = await getAllBooks();
+            const includeTranslations = document.getElementById('export-include-translations').checked;
+            const includeApiKeys = document.getElementById('export-include-apikeys').checked;
+
+            let books = await getAllBooks();
             const collections = await getAllCollections();
-            const data = JSON.stringify({ books, collections });
+            if (!includeTranslations) {
+                books = books.map(b => {
+                    const { translations, ...rest } = b;
+                    return rest;
+                });
+            }
+
+            const payload = { books, collections };
+            if (includeApiKeys) {
+                payload.apiKeys = {
+                    translateEngine: settings.translateEngine,
+                    geminiKey: settings.geminiKey,
+                    deeplKey: settings.deeplKey,
+                    deeplProxy: settings.deeplProxy
+                };
+            }
+
+            const data = JSON.stringify(payload);
             const blob = new Blob([data], { type: 'application/json' });
             saveAs(blob, `WebNovelBackup_${new Date().toISOString().slice(0,10)}.json`);
         }
@@ -1152,7 +1182,7 @@
                     await processImportedData(data);
                     renderLibrary(null);
                     hideLoader();
-                    alert('복원 완료!');
+                    alert(data.apiKeys ? '복원 완료! (API 키 포함)' : '복원 완료!');
                     closeSyncModal();
                 } catch(err) {
                     hideLoader(); alert('잘못된 백업 파일입니다.');
@@ -1162,6 +1192,15 @@
         }
 
         async function processImportedData(data) {
+            if(data.apiKeys) {
+                if(!confirm('백업 파일에 API 키가 포함되어 있습니다.\n현재 기기의 번역 설정을 덮어쓸까요?')) {
+                    delete data.apiKeys;
+                } else {
+                    settings = { ...settings, ...data.apiKeys };
+                    saveSettings();
+                    updateTranslateEngineUI();
+                }
+            }
             if(data.collections) {
                 for(let c of data.collections) {
                     const exists = await new Promise(r=>db.transaction(['collections'],'readonly').objectStore('collections').get(c.id).onsuccess=e=>r(e.target.result));
