@@ -89,6 +89,9 @@
             background-color: rgba(0,0,0,0.05); padding: 1rem; border-radius: 0.5rem; text-align: center; font-weight: bold; transition: background-color 0.2s; cursor: pointer;
         }
         .nav-btn:hover { background-color: rgba(0,0,0,0.1); }
+
+        .translating { opacity: 0.45; transition: opacity 0.3s; }
+        #translate-btn.translate-active { opacity: 1; color: #2563eb; background: rgba(37, 99, 235, 0.15); }
     </style>
 </head>
 <body class="bg-gray-50 h-screen flex flex-col font-sans-kr overflow-hidden text-gray-800 touch-pan-y">
@@ -162,8 +165,11 @@
             <!-- 중앙: 제목 -->
             <h2 id="viewer-title" class="text-base sm:text-lg font-bold flex-1 text-center px-2 truncate drop-shadow-md">제목</h2>
             
-            <!-- 오른쪽: 위로, 아래로, 공유, 설정 -->
+            <!-- 오른쪽: 번역, 위로, 아래로, 공유, 설정 -->
             <div class="flex items-center gap-1 shrink-0">
+                <button id="translate-btn" onclick="toggleTranslation()" class="p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="한국어로 자동 번역">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
+                </button>
                 <button onclick="scrollToTop()" class="p-2 rounded-lg hover:bg-black/10 transition-colors text-sm font-medium opacity-70 hover:opacity-100 bg-white/20 backdrop-blur-sm" title="맨 위로">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
                 </button>
@@ -430,6 +436,16 @@
                 }
             })
         }
+        function saveBookTranslations(id, map){
+            return new Promise(r=>{
+                const s=db.transaction(['books'],'readwrite').objectStore('books');
+                s.get(id).onsuccess=e=>{
+                    const d=e.target.result;
+                    if(d){ d.translations=map; s.put(d); }
+                    r();
+                }
+            })
+        }
 
         // --- 3. 서재(Library) UI 로직 ---
         function handleHashChange() {
@@ -518,6 +534,10 @@
             if(!book) { hideLoader(); goToRoot(); return; }
             currentBookId = id; currentBookData = book;
             document.getElementById('viewer-title').textContent = book.title;
+
+            // 번역 상태 초기화 (저장된 번역 캐시 복원)
+            resetTranslation();
+            translationCache = book.translations || {};
 
             // 목차 복원
             bookTOC = book.toc || [];
@@ -659,6 +679,144 @@
             bookTOC.splice(index, 1);
             await saveBookTOC(currentBookId, bookTOC);
             renderTOC();
+        }
+
+        // --- 5.5 실시간 번역 (외국어 → 한국어) ---
+        // 화면에 보이는 문단부터 순서대로 번역하고, 결과는 책별로 IndexedDB에 캐시한다.
+        let translationOn = false;
+        let translationObserver = null;
+        let translationCache = {};
+        let translatePending = new Set();
+        let translateRunning = false;
+        let translateSaveTimer = null;
+        const TRANSLATE_TARGET = 'ko';
+        const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + TRANSLATE_TARGET + '&dt=t';
+
+        function toggleTranslation() {
+            if (!currentBookId) return;
+            translationOn = !translationOn;
+            document.getElementById('translate-btn').classList.toggle('translate-active', translationOn);
+            if (translationOn) startTranslation();
+            else restoreOriginalText();
+        }
+
+        function resetTranslation() {
+            translationOn = false;
+            document.getElementById('translate-btn').classList.remove('translate-active');
+            if (translationObserver) { translationObserver.disconnect(); translationObserver = null; }
+            translatePending.clear();
+            translationCache = {};
+        }
+
+        function restoreOriginalText() {
+            if (translationObserver) { translationObserver.disconnect(); translationObserver = null; }
+            translatePending.clear();
+            document.querySelectorAll('#content-inner p').forEach(p => {
+                p.classList.remove('translating');
+                if (p.dataset.orig !== undefined) { p.textContent = p.dataset.orig; delete p.dataset.orig; }
+            });
+        }
+
+        function startTranslation() {
+            translationObserver = new IntersectionObserver((entries) => {
+                entries.forEach(en => {
+                    if (!en.isIntersecting) return;
+                    const idx = parseInt(en.target.dataset.lineIndex);
+                    if (translationCache[idx] !== undefined) {
+                        applyTranslatedLine(idx, translationCache[idx]);
+                        translationObserver.unobserve(en.target);
+                    } else if (en.target.textContent.trim() && en.target.textContent !== ' ') {
+                        translatePending.add(idx);
+                        en.target.classList.add('translating');
+                    } else {
+                        translationObserver.unobserve(en.target);
+                    }
+                });
+                runTranslateQueue();
+            }, { root: document.getElementById('content-container'), rootMargin: '800px 0px' });
+            document.querySelectorAll('#content-inner p').forEach(p => translationObserver.observe(p));
+        }
+
+        function applyTranslatedLine(idx, text) {
+            const p = document.getElementById(`line-${idx}`);
+            if (!p) return;
+            if (p.dataset.orig === undefined) p.dataset.orig = p.textContent;
+            p.textContent = text || ' ';
+            p.classList.remove('translating');
+        }
+
+        async function runTranslateQueue() {
+            if (translateRunning || !translationOn || translatePending.size === 0) return;
+            translateRunning = true;
+            try {
+                while (translationOn && translatePending.size > 0) {
+                    // 대기 중인 줄들을 3000자/40줄 이내 배치로 묶는다
+                    const idxs = [...translatePending].sort((a, b) => a - b);
+                    const batch = [];
+                    let chars = 0;
+                    for (const i of idxs) {
+                        const p = document.getElementById(`line-${i}`);
+                        if (!p) { translatePending.delete(i); continue; }
+                        const src = p.dataset.orig !== undefined ? p.dataset.orig : p.textContent;
+                        if (batch.length && (chars + src.length > 3000 || batch.length >= 40)) break;
+                        batch.push({ idx: i, text: src });
+                        chars += src.length;
+                    }
+                    if (batch.length === 0) break;
+                    batch.forEach(b => translatePending.delete(b.idx));
+                    const results = await translateTexts(batch.map(b => b.text));
+                    batch.forEach((b, k) => {
+                        translationCache[b.idx] = results[k];
+                        if (translationOn) applyTranslatedLine(b.idx, results[k]);
+                    });
+                    scheduleTranslationSave();
+                }
+            } catch (err) {
+                console.error('translate error', err);
+                if (translationOn) {
+                    translationOn = false;
+                    document.getElementById('translate-btn').classList.remove('translate-active');
+                    restoreOriginalText();
+                    alert('번역 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+                }
+            }
+            translateRunning = false;
+        }
+
+        async function translateTexts(texts) {
+            // 개행을 배치 구분자로 사용하므로 원문 내 개행은 공백으로 치환
+            const safe = texts.map(t => t.replace(/\n/g, ' '));
+            const res = await fetch(TRANSLATE_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body: new URLSearchParams({ q: safe.join('\n') })
+            });
+            if (!res.ok) throw new Error('translate http ' + res.status);
+            const data = await res.json();
+            const joined = (data[0] || []).map(seg => seg[0]).join('');
+            const lines = joined.split('\n');
+            if (lines.length === safe.length) return lines.map(s => s.trim());
+            // 줄 수가 어긋나면 해당 배치만 한 줄씩 재번역
+            const out = [];
+            for (const t of safe) {
+                const r = await fetch(TRANSLATE_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: new URLSearchParams({ q: t })
+                });
+                if (!r.ok) throw new Error('translate http ' + r.status);
+                const d = await r.json();
+                out.push((d[0] || []).map(seg => seg[0]).join('').trim());
+            }
+            return out;
+        }
+
+        function scheduleTranslationSave() {
+            clearTimeout(translateSaveTimer);
+            translateSaveTimer = setTimeout(() => {
+                if (currentBookId) saveBookTranslations(currentBookId, translationCache);
+                if (currentBookData) currentBookData.translations = translationCache;
+            }, 1000);
         }
 
         // --- 6. P2P 동기화 및 백업 (PeerJS) ---
