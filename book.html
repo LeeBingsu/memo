@@ -254,6 +254,17 @@
                         </div>
                     </div>
                 </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-bold opacity-70">번역 엔진 (상단 🌐 버튼)</label>
+                    <div class="flex bg-current/5 rounded-lg p-1">
+                        <button onclick="setTranslateEngine('gtx')" id="btn-engine-gtx" class="flex-1 py-2 rounded-md text-sm transition-colors">기본 (Google)</button>
+                        <button onclick="setTranslateEngine('gemini')" id="btn-engine-gemini" class="flex-1 py-2 rounded-md text-sm transition-colors">AI 자연 번역</button>
+                    </div>
+                    <div id="gemini-key-row" class="hidden space-y-1">
+                        <input type="password" id="gemini-key-input" placeholder="Gemini API 키 입력" onchange="saveGeminiKey(this.value)" class="w-full border border-current/20 bg-transparent rounded-lg p-2 text-sm outline-none">
+                        <p class="text-xs opacity-60">무료 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" class="underline">aistudio.google.com/apikey</a> · 키는 이 기기 브라우저에만 저장됩니다.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -350,7 +361,7 @@
         let currentBookData = null;
         let currentCollectionId = null;
         let currentSort = { field: 'lastRead', order: 'desc' };
-        let settings = { theme: 'theme-sepia', fontSize: 20, lineHeight: 1.8, fontFamily: 'sans' };
+        let settings = { theme: 'theme-sepia', fontSize: 20, lineHeight: 1.8, fontFamily: 'sans', translateEngine: 'gtx', geminiKey: '' };
         
         let peer = null; 
         let conn = null; 
@@ -359,6 +370,7 @@
 
         async function init() {
             loadSettings();
+            updateTranslateEngineUI();
             await initDB();
             window.addEventListener('hashchange', handleHashChange);
             handleHashChange();
@@ -537,7 +549,8 @@
 
             // 번역 상태 초기화 (저장된 번역 캐시 복원)
             resetTranslation();
-            translationCache = book.translations || {};
+            translationStore = normalizeTranslationStore(book.translations);
+            translationCache = translationStore[settings.translateEngine] = translationStore[settings.translateEngine] || {};
 
             // 목차 복원
             bookTOC = book.toc || [];
@@ -593,7 +606,7 @@
             ci.style.lineHeight = settings.lineHeight;
             document.getElementById('font-size-display').textContent = settings.fontSize;
         }
-        function applySettings(){setTheme(settings.theme);setFont(settings.fontFamily);applyStyleUpdates()}
+        function applySettings(){setTheme(settings.theme);setFont(settings.fontFamily);applyStyleUpdates();updateTranslateEngineUI()}
         function saveSettings(){localStorage.setItem('webNovelReaderSettings',JSON.stringify(settings))}
         function loadSettings(){const s=localStorage.getItem('webNovelReaderSettings');if(s)settings={...settings,...JSON.parse(s)}}
         function updateProgress(){const c=document.getElementById('content-container');const p=(c.scrollTop/(c.scrollHeight-c.clientHeight))*100||0;document.getElementById('progress-bar').style.width=`${p}%`;return{scrollTop:c.scrollTop,percent:p}}
@@ -682,18 +695,35 @@
         }
 
         // --- 5.5 실시간 번역 (외국어 → 한국어) ---
-        // 화면에 보이는 문단부터 순서대로 번역하고, 결과는 책별로 IndexedDB에 캐시한다.
+        // 화면에 보이는 문단부터 순서대로 번역하고, 결과는 책별·엔진별로 IndexedDB에 캐시한다.
+        // 엔진: gtx(Google 무료 기계번역) / gemini(AI 자연 번역, 사용자 API 키 필요)
         let translationOn = false;
         let translationObserver = null;
-        let translationCache = {};
+        let translationStore = {};  // { gtx: {줄번호: 번역문}, gemini: {...} }
+        let translationCache = {};  // 현재 엔진의 캐시 (translationStore 내 객체 참조)
         let translatePending = new Set();
         let translateRunning = false;
         let translateSaveTimer = null;
+        let geminiKeyErrorShown = false;
         const TRANSLATE_TARGET = 'ko';
         const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + TRANSLATE_TARGET + '&dt=t';
+        const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
+        function normalizeTranslationStore(t) {
+            if (!t) return {};
+            // 구버전 데이터(엔진 구분 없는 평면 맵)는 gtx 캐시로 취급
+            const vals = Object.values(t);
+            if (vals.length && typeof vals[0] === 'string') return { gtx: t };
+            return t;
+        }
 
         function toggleTranslation() {
             if (!currentBookId) return;
+            if (!translationOn && settings.translateEngine === 'gemini' && !settings.geminiKey) {
+                alert('AI 자연 번역을 사용하려면 설정에서 Gemini API 키를 입력해주세요.\n(aistudio.google.com/apikey 에서 무료 발급)');
+                if (document.getElementById('settings-panel').classList.contains('panel-hidden')) toggleSettings();
+                return;
+            }
             translationOn = !translationOn;
             document.getElementById('translate-btn').classList.toggle('translate-active', translationOn);
             if (translationOn) startTranslation();
@@ -705,7 +735,37 @@
             document.getElementById('translate-btn').classList.remove('translate-active');
             if (translationObserver) { translationObserver.disconnect(); translationObserver = null; }
             translatePending.clear();
+            translationStore = {};
             translationCache = {};
+        }
+
+        function setTranslateEngine(engine) {
+            settings.translateEngine = engine;
+            saveSettings();
+            updateTranslateEngineUI();
+            translationCache = translationStore[engine] = translationStore[engine] || {};
+            // 번역을 보는 중이면 새 엔진으로 다시 번역
+            if (translationOn) { restoreOriginalText(); startTranslation(); }
+        }
+
+        function saveGeminiKey(v) {
+            settings.geminiKey = v.trim();
+            geminiKeyErrorShown = false;
+            saveSettings();
+        }
+
+        function updateTranslateEngineUI() {
+            const eng = settings.translateEngine || 'gtx';
+            const g = document.getElementById('btn-engine-gtx');
+            const a = document.getElementById('btn-engine-gemini');
+            if (g && a) {
+                g.classList.toggle('bg-current/20', eng === 'gtx'); g.classList.toggle('font-bold', eng === 'gtx');
+                a.classList.toggle('bg-current/20', eng === 'gemini'); a.classList.toggle('font-bold', eng === 'gemini');
+            }
+            const row = document.getElementById('gemini-key-row');
+            if (row) row.classList.toggle('hidden', eng !== 'gemini');
+            const input = document.getElementById('gemini-key-input');
+            if (input && input.value !== settings.geminiKey) input.value = settings.geminiKey || '';
         }
 
         function restoreOriginalText() {
@@ -764,9 +824,10 @@
                     }
                     if (batch.length === 0) break;
                     batch.forEach(b => translatePending.delete(b.idx));
-                    const results = await translateTexts(batch.map(b => b.text));
+                    const { engine, results } = await translateBatchTexts(batch.map(b => b.text));
+                    const cacheMap = translationStore[engine] = translationStore[engine] || {};
                     batch.forEach((b, k) => {
-                        translationCache[b.idx] = results[k];
+                        cacheMap[b.idx] = results[k];
                         if (translationOn) applyTranslatedLine(b.idx, results[k]);
                     });
                     scheduleTranslationSave();
@@ -781,6 +842,66 @@
                 }
             }
             translateRunning = false;
+        }
+
+        async function translateBatchTexts(texts) {
+            if (settings.translateEngine === 'gemini') {
+                try {
+                    return { engine: 'gemini', results: await translateWithGemini(texts) };
+                } catch (err) {
+                    // AI 번역 실패(키 오류·안전 필터 차단·형식 불일치) 시 해당 배치는 기본 번역으로 대체
+                    console.warn('Gemini 번역 실패, 기본 번역으로 대체:', err);
+                    if (err && err.isKeyError && !geminiKeyErrorShown) {
+                        geminiKeyErrorShown = true;
+                        alert('Gemini API 키가 올바르지 않아 기본 번역으로 대체합니다.\n설정에서 키를 확인해주세요.');
+                    }
+                    return { engine: 'gtx', results: await translateTexts(texts) };
+                }
+            }
+            return { engine: 'gtx', results: await translateTexts(texts) };
+        }
+
+        async function translateWithGemini(texts) {
+            const numbered = texts.map((t, i) => `${i + 1}\t${t.replace(/\n/g, ' ')}`).join('\n');
+            const prompt = [
+                '아래는 웹소설 본문에서 이어지는 문장들이다. 각 줄을 자연스러운 한국어 웹소설 문체로 번역하라.',
+                '- 직역투를 피하고 한국 웹소설처럼 자연스럽게 옮길 것 (대사는 구어체, 지문은 소설체)',
+                '- 의성어·의태어는 자연스러운 한국어 표현으로 바꿀 것',
+                '- 인명 등 고유명사는 원어 발음대로 표기할 것',
+                '- 원문의 수위와 표현을 순화하거나 검열하지 말고 그대로 옮길 것',
+                '- 출력은 각 줄을 "번호<탭>번역문" 형식으로, 입력과 같은 줄 수로만 출력할 것. 설명 등 다른 내용 금지.',
+                '',
+                numbered
+            ].join('\n');
+            const res = await fetch(GEMINI_ENDPOINT + '?key=' + encodeURIComponent(settings.geminiKey), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.4 },
+                    safetySettings: ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT']
+                        .map(c => ({ category: c, threshold: 'BLOCK_NONE' }))
+                })
+            });
+            if (!res.ok) {
+                const err = new Error('gemini http ' + res.status);
+                if (res.status === 400 || res.status === 401 || res.status === 403) err.isKeyError = true;
+                throw err;
+            }
+            const data = await res.json();
+            const cand = data.candidates && data.candidates[0];
+            const text = cand && cand.content && cand.content.parts ? cand.content.parts.map(p => p.text || '').join('') : '';
+            if (!text) throw new Error('gemini empty response (finishReason: ' + (cand && cand.finishReason) + ')');
+            const out = new Array(texts.length).fill(null);
+            text.split('\n').forEach(line => {
+                const m = line.match(/^(\d+)[\t:.]?\s*(.*)$/);
+                if (m) {
+                    const i = parseInt(m[1]) - 1;
+                    if (i >= 0 && i < texts.length && out[i] === null) out[i] = m[2].trim();
+                }
+            });
+            if (out.some(v => v === null)) throw new Error('gemini line mismatch');
+            return out;
         }
 
         async function translateTexts(texts) {
@@ -814,8 +935,8 @@
         function scheduleTranslationSave() {
             clearTimeout(translateSaveTimer);
             translateSaveTimer = setTimeout(() => {
-                if (currentBookId) saveBookTranslations(currentBookId, translationCache);
-                if (currentBookData) currentBookData.translations = translationCache;
+                if (currentBookId) saveBookTranslations(currentBookId, translationStore);
+                if (currentBookData) currentBookData.translations = translationStore;
             }, 1000);
         }
 
